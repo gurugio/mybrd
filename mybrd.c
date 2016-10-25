@@ -55,18 +55,58 @@ static struct page *mybrd_lookup_page(struct mybrd_device *mybrd,
 
 	// 9 = SECTOR_SHIFT
 	idx = sector >> (PAGE_SHIFT - 9);
-	page = radix_tree_lookup(&mybrd->mybrd_pages, idx);
+	p = radix_tree_lookup(&mybrd->mybrd_pages, idx);
 
 	rcu_read_unlock();
 
-	pr_warn("lookup-page: %d\n", page ? (int)page->index : -1);
-	return page;
+	pr_warn("lookup-page: %d\n", p ? (int)p->index : -1);
+	return p;
 }
 
 static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 				      sector_t sector)
 {
+	pgoff_t idx;
+	struct page *p;
+	gfp_t gfp_flags;
 
+	p = mybrd_lookup_page(brd, sector);
+	if (page)
+		return page;
+
+	// must use _NOIO
+	gfp_flags = GFP_NOIO | __GFP_ZERO;
+	p = alloc_page(gfp_flags);
+	if (!page)
+		return NULL;
+
+	
+	if (radix_tree_preload(GFP_NOIO)) {
+		__free_page(p);
+		return NULL;
+	}
+
+	// According to radix tree API document,
+	// radix_tree_lookup() requires rcu_read_lock(),
+	// but user must ensure the sync of calls to radix_tree_insert().
+	spin_lock(&mybrd->mybrd_lock);
+
+	// #sector -> #page
+	// one page can store 8-sectors
+	idx = sector >> (PAGE_SHIFT - 9);
+	p->index = idx;
+
+	if (radix_tree_insert(&mybrd->mybrd_pages, idx, p)) {
+		__free_page(p);
+		p = radix_tree_lookup(&mybrd->mybrd_pages, idx);
+		pr_warn("failed to inser page: duplicated=%d\n", idx);
+	}
+
+	spin_unlock(&mybrd->mybrd_lock);
+
+	radix_tree_preload_end();
+	
+	return p;
 }
 
 static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
