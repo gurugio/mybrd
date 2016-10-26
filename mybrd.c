@@ -70,14 +70,14 @@ static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 	struct page *p;
 	gfp_t gfp_flags;
 
-	p = mybrd_lookup_page(brd, sector);
-	if (page)
-		return page;
+	p = mybrd_lookup_page(mybrd, sector);
+	if (p)
+		return p;
 
 	// must use _NOIO
 	gfp_flags = GFP_NOIO | __GFP_ZERO;
 	p = alloc_page(gfp_flags);
-	if (!page)
+	if (!p)
 		return NULL;
 
 	
@@ -108,6 +108,55 @@ static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 	
 	return p;
 }
+
+static void copy_to_brd(struct mybrd_device *mybrd,
+			const void *src,
+			sector_t sector,
+			size_t n)
+{
+	struct page *p;
+	void *dst;
+	unsigned int offset;
+	size_t copy;
+
+	
+	p = mybrd_lookup_page(mybrd, sector);
+	if (!p) {
+		// First added data, need to make space to store data
+
+		// sectors can be stored across two pages
+		
+		// 8 = one page can have 8-sectors
+		// offset = sector * 512(sector-size) = offset in a page
+		// eg) sector = 123, size=4096
+		// page1 <- sector120 ~ sector127
+		// page2 <- sector128 ~ sector136
+		// store 512*5-bytes at page1 (sector 123~127)
+		// store 512*3-bytes at page2 (sector 128~130)
+		// page1->index = 120, page2->index = 128
+		
+		offset = (sector & (8 - 1)) << 3;
+
+		// copy = copy data in a page
+		copy = min_t(size_t, n, PAGE_SIZE - offset);
+
+		// insert the first page
+		if (!mybrd_insert_page(mybrd, sector))
+		    return -ENOSPC;
+
+		if (copy < n) {
+			sector = sector + (copy >> 9); // new sector number
+			if (!mybrd_insert_page(mybrd, sector))
+				return -ENOSPC;
+		}
+
+		// now it cannot fail
+		p = mybrd_lookup_page(mybrd, sector);
+		BUG(!p);
+	}
+
+}
+
 
 static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 {
@@ -151,7 +200,7 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 	
 	bio_endio(bio);
 	
-	pr_warn("end mybrd_make_request");
+	pr_warn("end mybrd_make_request\n");
 	// no cookie
 	return BLK_QC_T_NONE;
 }
@@ -201,8 +250,9 @@ static struct mybrd_device *mybrd_alloc(void)
 	// don't know why
 	blk_queue_bounce_limit(mybrd->mybrd_queue, BLK_BOUNCE_ANY);
 
-	// ram disk can have 4K block
-	// null_blk set 512b.. may be to simulate real device?
+	// kernel tries to read/write 4096b at once
+	// if I check bio in mybrd_make_request().
+	// Whay is block-size?
 	blk_queue_physical_block_size(mybrd->mybrd_queue, PAGE_SIZE);
 
 	// don't know why
