@@ -44,6 +44,22 @@ static int mybrd_major;
 struct mybrd_device *global_mybrd;
 #define MYBRD_SIZE_SECT 1024*2 // 1k*2*512 = 1Mb	
 
+#if 0
+static void brd_free_all_pages(struct mybrd_device *mybrd)
+{
+	unsigned long pos = 0;
+	struct page *pages[16];
+	int nr_pages;
+	
+	do {
+		int i;
+		
+		nr_pages = radix_tree_gang_lookup(
+               
+		       // free 16-pages at once
+			} while (nr_pages == 16);
+}
+#endif
 
 static struct page *mybrd_lookup_page(struct mybrd_device *mybrd,
 				      sector_t sector)
@@ -99,7 +115,8 @@ static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 	if (radix_tree_insert(&mybrd->mybrd_pages, idx, p)) {
 		__free_page(p);
 		p = radix_tree_lookup(&mybrd->mybrd_pages, idx);
-		pr_warn("failed to inser page: duplicated=%d\n", idx);
+		pr_warn("failed to inser page: duplicated=%d\n",
+			(int)idx);
 	}
 
 	spin_unlock(&mybrd->mybrd_lock);
@@ -109,42 +126,42 @@ static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 	return p;
 }
 
-static void copy_to_brd(struct mybrd_device *mybrd,
-			const void *src,
-			sector_t sector,
-			size_t n)
+static int copy_to_mybrd(struct mybrd_device *mybrd,
+			 /* const void *src, */
+			 struct page *src_page,
+			 int len,
+			 unsigned int src_offset,
+			 sector_t sector)
 {
 	struct page *p;
 	void *dst;
-	unsigned int offset;
+	unsigned int target_offset;
 	size_t copy;
+	void *src;
 
-	
+	// sectors can be stored across two pages
+	// 8 = one page can have 8-sectors
+	// target_offset = sector * 512(sector-size) = target_offset in a page
+	// eg) sector = 123, size=4096
+	// page1 <- sector120 ~ sector127
+	// page2 <- sector128 ~ sector136
+	// store 512*5-bytes at page1 (sector 123~127)
+	// store 512*3-bytes at page2 (sector 128~130)
+	// page1->index = 120, page2->index = 128
+
+	target_offset = (sector & (8 - 1)) << 3;
+	// copy = copy data in a page
+	copy = min_t(size_t, len, PAGE_SIZE - target_offset);
+
 	p = mybrd_lookup_page(mybrd, sector);
 	if (!p) {
 		// First added data, need to make space to store data
-
-		// sectors can be stored across two pages
-		
-		// 8 = one page can have 8-sectors
-		// offset = sector * 512(sector-size) = offset in a page
-		// eg) sector = 123, size=4096
-		// page1 <- sector120 ~ sector127
-		// page2 <- sector128 ~ sector136
-		// store 512*5-bytes at page1 (sector 123~127)
-		// store 512*3-bytes at page2 (sector 128~130)
-		// page1->index = 120, page2->index = 128
-		
-		offset = (sector & (8 - 1)) << 3;
-
-		// copy = copy data in a page
-		copy = min_t(size_t, n, PAGE_SIZE - offset);
 
 		// insert the first page
 		if (!mybrd_insert_page(mybrd, sector))
 		    return -ENOSPC;
 
-		if (copy < n) {
+		if (copy < len) {
 			sector = sector + (copy >> 9); // new sector number
 			if (!mybrd_insert_page(mybrd, sector))
 				return -ENOSPC;
@@ -152,11 +169,35 @@ static void copy_to_brd(struct mybrd_device *mybrd,
 
 		// now it cannot fail
 		p = mybrd_lookup_page(mybrd, sector);
-		BUG(!p);
+		BUG_ON(!p);
 	}
 
-}
+	src = kmap(src_page);
+	src += src_offset;
 
+	dst = kmap(p);
+	memcpy(dst + target_offset, src, copy);
+	kunmap(dst);
+	
+	// copy next page
+	if (copy < len) {
+		sector += (copy >> 9);
+		copy = len - copy;
+		p = mybrd_lookup_page(mybrd, sector);
+		BUG_ON(!p);
+
+		dst = kmap(p); // next page
+		src += copy;
+
+		// dst: copy data at the first address of the page
+		memcpy(dst, src, copy);
+		kunmap_atomic(dst);
+		kunmap(dst);
+	}
+	kunmap(src);
+
+	return 0;
+}
 
 static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 {
@@ -190,18 +231,36 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 		unsigned int len = bvec.bv_len;
 		struct page *p = bvec.bv_page;
 		unsigned int offset = bvec.bv_offset;
+		int err;
 
 		pr_warn("bio-info: len=%u p=%p offset=%u\n",
 			len, p, offset);
+
+		if (rw == READ) {
+			return -EPERM;
+		} else if (rw == WRITE) {
+			err = copy_to_mybrd(mybrd,
+					    p,
+					    len,
+					    offset,
+					    sector);
+		}
+
+		if (err)
+			goto io_error;
+
+		sector = sector + (len >> 9);
 	}
 		
-	
 	// when disk is added, make_request is called..why??
 	
 	bio_endio(bio);
 	
 	pr_warn("end mybrd_make_request\n");
 	// no cookie
+	return BLK_QC_T_NONE;
+io_error:
+	bio_io_error(bio);
 	return BLK_QC_T_NONE;
 }
 
