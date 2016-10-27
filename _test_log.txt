@@ -1,0 +1,431 @@
+==== 27/10/2016 write 1024byte ====
+
+* When writing 1024b, it reads 4096bytes and change 1024bytes and write
+  4096bytes
+
+/ # dd if=/dev/urandom of=/dev/mybrd bs=1024 count=2
+[  518.307326] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0
+mybrd=ffff880006005540
+[  518.308032] CPU: 0 PID: 1012 Comm: dd Not tainted 4.4.0+ #13
+[  518.308456] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS
+Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[  518.309144]  00000000ffffffff ffff880006f1fa68 ffffffff8130dadf
+ffff88000667b480
+[  518.309720]  ffff880006f1fb10 ffffffff814fa212 ffff88000667b480
+ffff880000c00000
+[  518.310272]  ffff880006f1faa8 ffffffff812f4aa6 0000000000000008
+00000000ffffffff
+[  518.311009] Call Trace:
+[  518.311192]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[  518.311580]  [<ffffffff814fa212>] mybrd_make_request+0x42/0x7e0
+[  518.312002]  [<ffffffff812f4aa6>] ? create_task_io_context+0x96/0xf0
+[  518.312459]  [<ffffffff812ed4d6>] ? generic_make_request_checks+0x316/0x320
+[  518.312955]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[  518.313390]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[  518.313822]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[  518.314192]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[  518.314630]  [<ffffffff8119fef8>] ll_rw_block+0x68/0xa0
+[  518.315004]  [<ffffffff811a038b>] __block_write_begin+0x3cb/0x480
+[  518.315440]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  518.315796]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  518.316148]  [<ffffffff811a0481>] block_write_begin+0x41/0x80
+[  518.316558]  [<ffffffff813d1b89>] ? extract_buf+0x99/0x100
+[  518.316943]  [<ffffffff811a27fe>] blkdev_write_begin+0x1e/0x20
+[  518.317308]  [<ffffffff8111a12a>] generic_perform_write+0xba/0x1a0
+[  518.317713]  [<ffffffff8118657c>] ? file_update_time+0x9c/0xf0
+[  518.318122]  [<ffffffff8111bc8b>] __generic_file_write_iter+0x18b/0x1e0
+[  518.318600]  [<ffffffff81315ec2>] ? memzero_explicit+0x12/0x20
+[  518.319018]  [<ffffffff811a30fa>] blkdev_write_iter+0x7a/0x100
+[  518.319441]  [<ffffffff813d2ea3>] ? urandom_read+0x43/0xf0
+[  518.319835]  [<ffffffff8116d8a5>] __vfs_write+0xa5/0xe0
+[  518.320207]  [<ffffffff8116e134>] vfs_write+0xa4/0x1a0
+[  518.320674]  [<ffffffff8116e06f>] ? vfs_read+0x10f/0x130
+[  518.321075]  [<ffffffff8116ed01>] SyS_write+0x41/0xa0
+[  518.321485]  [<ffffffff8188ecee>] entry_SYSCALL_64_fastpath+0x12/0x71
+[  518.322012] mybrd: bio-info: sector=0 end_sector=8 rw=READ
+[  518.322427] mybrd: bio-info: end-io=ffffffff8119de20
+[  518.322787] mybrd: bio-info: len=4096 p=ffffea00001b4b00 offset=0
+[  518.323206] mybrd: lookup: page-ffffea000019f000 index-0 sector-0
+[  518.323625] mybrd: copy: ffff880006d2c000 <- ffff8800067c0000 (4096-bytes)
+[  518.324093] mybrd: 5 80 f7 7e 30 6f b9 97
+[  518.324373] mybrd: 5 80 f7 7e 30 6f b9 97
+[  518.324650] mybrd: end mybrd_make_request
+[  518.325052] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0
+mybrd=ffff880006005540
+[  518.325712] CPU: 0 PID: 1012 Comm: dd Not tainted 4.4.0+ #13
+[  518.326098] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS
+Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[  518.326813]  00000000ffffffff ffff880006f1f9d8 ffffffff8130dadf
+ffff88000667b480
+[  518.327388]  ffff880006f1fa80 ffffffff814fa212 0000000000000000
+0000000000000000
+[  518.328033]  ffff880006f1fa08 ffffffff8109ca1a ffff880006f1fa68
+ffffffff81118f63
+[  518.328584] Call Trace:
+[  518.328757]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[  518.329107]  [<ffffffff814fa212>] mybrd_make_request+0x42/0x7e0
+[  518.329526]  [<ffffffff8109ca1a>] ? vprintk_default+0x1a/0x20
+[  518.330095]  [<ffffffff81118f63>] ? printk+0x43/0x4b
+[  518.330442]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[  518.330856]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[  518.331283]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[  518.331703]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[  518.332044]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[  518.332431]  [<ffffffff811a188d>]
+__block_write_full_page.constprop.43+0x10d/0x3a0
+[  518.332987]  [<ffffffff810ac8d5>] ? add_timer_on+0xd5/0x130
+[  518.333500]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  518.333845]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  518.334186]  [<ffffffff811a1c60>] block_write_full_page+0x140/0x160
+[  518.334625]  [<ffffffff811a2853>] blkdev_writepage+0x13/0x20
+[  518.335016]  [<ffffffff8112344e>] __writepage+0xe/0x30
+[  518.335374]  [<ffffffff81123e67>] write_cache_pages+0x1d7/0x4c0
+[  518.335809]  [<ffffffff81123440>] ? domain_dirty_limits+0x120/0x120
+[  518.336238]  [<ffffffff8111a4ee>] ? unlock_page+0x5e/0x60
+[  518.336612]  [<ffffffff8112418c>] generic_writepages+0x3c/0x60
+[  518.337013]  [<ffffffff81125ed9>] do_writepages+0x19/0x30
+[  518.337454]  [<ffffffff8111b2ec>] __filemap_fdatawrite_range+0x6c/0x90
+[  518.337961]  [<ffffffff8111b357>] filemap_write_and_wait+0x27/0x70
+[  518.338397]  [<ffffffff811a29e9>] __blkdev_put+0x69/0x220
+[  518.338880]  [<ffffffff811a3156>] ? blkdev_write_iter+0xd6/0x100
+[  518.339448]  [<ffffffff811a2f97>] blkdev_put+0x47/0x100
+[  518.340203]  [<ffffffff811a3070>] blkdev_close+0x20/0x30
+[  518.340609]  [<ffffffff8116f7e7>] __fput+0xd7/0x1e0
+[  518.340965]  [<ffffffff8116f929>] ____fput+0x9/0x10
+[  518.341318]  [<ffffffff810702ae>] task_work_run+0x6e/0x90
+[  518.341747]  [<ffffffff810021a2>] exit_to_usermode_loop+0x92/0xa0
+[  518.342176]  [<ffffffff81002b2e>] syscall_return_slowpath+0x4e/0x60
+[  518.342620]  [<ffffffff8188ee4c>] int_ret_from_sys_call+0x25/0x8f
+[  518.343068] mybrd: bio-info: sector=0 end_sector=8 rw=WRITE
+[  518.343477] mybrd: bio-info: end-io=ffffffff8119de20
+[  518.343825] mybrd: bio-info: len=4096 p=ffffea00001b4b00 offset=0
+[  518.344432] mybrd: lookup: page-ffffea000019f000 index-0 sector-0
+[  518.344863] mybrd: copy: ffff8800067c0000 <- ffff880006d2c000 (4096-bytes)
+[  518.345354] mybrd: c7 65 bc 81 c0 d0 82 e2
+[  518.345671] mybrd: c7 65 bc 81 c0 d0 82 e2
+[  518.345958] mybrd: end mybrd_make_request
+2+0 records in
+2+0 records out
+2048 bytes (2.0KB) copied, 0.039027 seconds, 51.2KB/s
+
+
+==== 27/10/2016 test read&write by 4096-bytes ====
+
+/ # dd if=/dev/urandom of=/dev/mybrd bs=4096 count=2
+[  195.020379] random: dd urandom read with 19 bits of entropy available
+[  195.021389] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0 mybrd=ffff880006005540
+[  195.021970] CPU: 0 PID: 1008 Comm: dd Not tainted 4.4.0+ #13
+[  195.022347] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS
+Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[  195.022978]  00000000ffffffff ffff88000665f9d8 ffffffff8130dadf ffff88000667bb40
+[  195.023498]  ffff88000665fa80 ffffffff814fa212 ffff88000667bb40 ffff880000c00068
+[  195.024013]  ffff88000665fa18 ffffffff812f4aa6 0000000000000008 00000000ffffffff
+[  195.024528] Call Trace:
+[  195.024697]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[  195.025032]  [<ffffffff814fa212>] mybrd_make_request+0x42/0x7e0
+[  195.025481]  [<ffffffff812f4aa6>] ? create_task_io_context+0x96/0xf0
+[  195.026046]  [<ffffffff812ed4d6>] ? generic_make_request_checks+0x316/0x320
+[  195.026604]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[  195.027382]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[  195.027886]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[  195.028262]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[  195.028749]  [<ffffffff811a188d>] __block_write_full_page.constprop.43+0x10d/0x3a0
+[  195.029359]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  195.029708]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  195.030053]  [<ffffffff811a1c60>] block_write_full_page+0x140/0x160
+[  195.030436]  [<ffffffff811a2853>] blkdev_writepage+0x13/0x20
+[  195.030776]  [<ffffffff8112344e>] __writepage+0xe/0x30
+[  195.031177]  [<ffffffff81123e67>] write_cache_pages+0x1d7/0x4c0
+[  195.031622]  [<ffffffff8119e7a3>] ? __set_page_dirty.constprop.46+0x63/0xb0
+[  195.032092]  [<ffffffff81123440>] ? domain_dirty_limits+0x120/0x120
+[  195.032571]  [<ffffffff8111a4ee>] ? unlock_page+0x5e/0x60
+[  195.032941]  [<ffffffff8112418c>] generic_writepages+0x3c/0x60
+[  195.033316]  [<ffffffff81125ed9>] do_writepages+0x19/0x30
+[  195.033660]  [<ffffffff8111b2ec>] __filemap_fdatawrite_range+0x6c/0x90
+[  195.034078]  [<ffffffff8111b357>] filemap_write_and_wait+0x27/0x70
+[  195.034503]  [<ffffffff811a29e9>] __blkdev_put+0x69/0x220
+[  195.034875]  [<ffffffff811a3156>] ? blkdev_write_iter+0xd6/0x100
+[  195.035282]  [<ffffffff811a2f97>] blkdev_put+0x47/0x100
+[  195.035620]  [<ffffffff811a3070>] blkdev_close+0x20/0x30
+[  195.035961]  [<ffffffff8116f7e7>] __fput+0xd7/0x1e0
+[  195.036272]  [<ffffffff8116f929>] ____fput+0x9/0x10
+[  195.036590]  [<ffffffff810702ae>] task_work_run+0x6e/0x90
+[  195.036937]  [<ffffffff810021a2>] exit_to_usermode_loop+0x92/0xa0
+[  195.037331]  [<ffffffff81002b2e>] syscall_return_slowpath+0x4e/0x60
+[  195.037750]  [<ffffffff8188ee4c>] int_ret_from_sys_call+0x25/0x8f
+[  195.038157] mybrd: bio-info: sector=0 end_sector=8 rw=WRITE
+[  195.038542] mybrd: bio-info: end-io=ffffffff8119de20
+[  195.038860] mybrd: bio-info: len=4096 p=ffffea0000186000 offset=0
+[  195.039271] mybrd: lookup: page-          (null) index--1 sector-0
+[  195.039669] mybrd: lookup: page-          (null) index--1 sector-0
+[  195.040068] mybrd: insert: page-ffffea000019f000 index=0 sector-0
+[  195.040464] mybrd: lookup: page-ffffea000019f000 index-0 sector-0
+[  195.040854] mybrd: copy: ffff8800067c0000 <- ffff880006180000 (4096-bytes)
+[  195.041418] mybrd: 5 80 f7 7e 30 6f b9 97
+[  195.041679] mybrd: 5 80 f7 7e 30 6f b9 97
+[  195.041950] mybrd: end mybrd_make_request
+[  195.042273] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0 mybrd=ffff880006005540
+[  195.042874] CPU: 0 PID: 1008 Comm: dd Not tainted 4.4.0+ #13
+[  195.043238] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS
+Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[  195.043842]  00000000ffffffff ffff88000665f9d8 ffffffff8130dadf ffff88000667bb40
+[  195.044348]  ffff88000665fa80 ffffffff814fa212 ffff88000644d940 ffff88000644d940
+[  195.044851]  ffff88000644d940 ffffea000019f000 ffff880000000000 0000000000000000
+[  195.045400] Call Trace:
+[  195.045548]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[  195.045929]  [<ffffffff814fa212>] mybrd_make_request+0x42/0x7e0
+[  195.046421]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[  195.046937]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[  195.047366]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[  195.047767]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[  195.048108]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[  195.048513]  [<ffffffff811a188d>] __block_write_full_page.constprop.43+0x10d/0x3a0
+[  195.049051]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  195.049376]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  195.049695]  [<ffffffff811a1c60>] block_write_full_page+0x140/0x160
+[  195.050095]  [<ffffffff811a2853>] blkdev_writepage+0x13/0x20
+[  195.050463]  [<ffffffff8112344e>] __writepage+0xe/0x30
+[  195.050803]  [<ffffffff81123e67>] write_cache_pages+0x1d7/0x4c0
+[  195.051186]  [<ffffffff8119e7a3>] ? __set_page_dirty.constprop.46+0x63/0xb0
+[  195.051636]  [<ffffffff81123440>] ? domain_dirty_limits+0x120/0x120
+[  195.052037]  [<ffffffff8111a4ee>] ? unlock_page+0x5e/0x60
+[  195.052403]  [<ffffffff8112418c>] generic_writepages+0x3c/0x60
+[  195.052790]  [<ffffffff81125ed9>] do_writepages+0x19/0x30
+[  195.053151]  [<ffffffff8111b2ec>] __filemap_fdatawrite_range+0x6c/0x90
+[  195.053571]  [<ffffffff8111b357>] filemap_write_and_wait+0x27/0x70
+[  195.053963]  [<ffffffff811a29e9>] __blkdev_put+0x69/0x220
+[  195.054361]  [<ffffffff811a3156>] ? blkdev_write_iter+0xd6/0x100
+[  195.054746]  [<ffffffff811a2f97>] blkdev_put+0x47/0x100
+[  195.055079]  [<ffffffff811a3070>] blkdev_close+0x20/0x30
+[  195.055432]  [<ffffffff8116f7e7>] __fput+0xd7/0x1e0
+[  195.055747]  [<ffffffff8116f929>] ____fput+0x9/0x10
+[  195.056060]  [<ffffffff810702ae>] task_work_run+0x6e/0x90
+[  195.056407]  [<ffffffff810021a2>] exit_to_usermode_loop+0x92/0xa0
+[  195.056814]  [<ffffffff81002b2e>] syscall_return_slowpath+0x4e/0x60
+[  195.057212]  [<ffffffff8188ee4c>] int_ret_from_sys_call+0x25/0x8f
+[  195.057603] mybrd: bio-info: sector=8 end_sector=16 rw=WRITE
+[  195.058044] mybrd: bio-info: end-io=ffffffff8119de20
+[  195.058370] mybrd: bio-info: len=4096 p=ffffea000019c400 offset=0
+[  195.058816] mybrd: lookup: page-          (null) index--1 sector-8
+[  195.059392] mybrd: lookup: page-          (null) index--1 sector-8
+[  195.060161] mybrd: insert: page-ffffea000019f040 index=1 sector-8
+[  195.060807] mybrd: lookup: page-ffffea000019f040 index-1 sector-8
+[  195.061201] mybrd: copy: ffff8800067c1000 <- ffff880006710000 (4096-bytes)
+[  195.061652] mybrd: 20 b7 a3 3c 39 fc 3c 34
+[  195.061990] mybrd: 20 b7 a3 3c 39 fc 3c 34
+[  195.062302] mybrd: end mybrd_make_request
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.042235 seconds, 189.4KB/s
+[  195.063256] dd (1008) used greatest stack depth: 13216 bytes left
+/ # dd if=/dev/mybrd of=./sec1 bs=4096 count=1
+[  223.596067] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0
+mybrd=ffff880006005540
+[  223.596790] CPU: 0 PID: 1009 Comm: dd Not tainted 4.4.0+ #13
+[  223.597459] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[  223.598093]  00000000ffffffff ffff88000665fa78 ffffffff8130dadf ffff88000667b3c0
+[  223.598575]  ffff88000665fb20 ffffffff814fa212 ffff88000667b3c0 ffff88000667b3c0
+[  223.599041]  ffff88000665fab8 ffffffff812f4aa6 0000000000000020 00000000ffffffff
+[  223.599530] Call Trace:
+[  223.599686]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[  223.600000]  [<ffffffff814fa212>] mybrd_make_request+0x42/0x7e0
+[  223.600366]  [<ffffffff812f4aa6>] ? create_task_io_context+0x96/0xf0
+[  223.600754]  [<ffffffff812ed4d6>] ? generic_make_request_checks+0x316/0x320
+[  223.601185]  [<ffffffff811a894a>] ? do_mpage_readpage+0x2ba/0x6c0
+[  223.601634]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[  223.602042]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[  223.602365]  [<ffffffff81127f49>] ? lru_cache_add+0x9/0x10
+[  223.602693]  [<ffffffff811a8e85>] mpage_readpages+0x135/0x150
+[  223.603033]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  223.603332]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[  223.603629]  [<ffffffff8115f497>] ? alloc_pages_current+0x87/0x110
+[  223.603996]  [<ffffffff811a2818>] blkdev_readpages+0x18/0x20
+[  223.604336]  [<ffffffff81126493>] __do_page_cache_readahead+0x163/0x1f0
+[  223.604729]  [<ffffffff811265eb>] ondemand_readahead+0xcb/0x250
+[  223.605080]  [<ffffffff81126959>] page_cache_sync_readahead+0x29/0x40
+[  223.605467]  [<ffffffff8111b89a>] generic_file_read_iter+0x46a/0x570
+[  223.605844]  [<ffffffff811a31b0>] blkdev_read_iter+0x30/0x40
+[  223.606182]  [<ffffffff8116d7d2>] __vfs_read+0xa2/0xd0
+[  223.606516]  [<ffffffff8116dfe1>] vfs_read+0x81/0x130
+[  223.607050]  [<ffffffff8116ec61>] SyS_read+0x41/0xa0
+[  223.607542]  [<ffffffff8188ecee>] entry_SYSCALL_64_fastpath+0x12/0x71
+[  223.607997] mybrd: bio-info: sector=0 end_sector=32 rw=READ
+[  223.608395] mybrd: bio-info: end-io=ffffffff811a7dd0
+[  223.608756] mybrd: bio-info: len=4096 p=ffffea0000001980 offset=0
+[  223.609180] mybrd: lookup: page-ffffea000019f000 index-0 sector-0
+[  223.609605] mybrd: copy: ffff880000066000 <- ffff8800067c0000 (4096-bytes)
+[  223.610078] mybrd: 5 80 f7 7e 30 6f b9 97
+[  223.610381] mybrd: 5 80 f7 7e 30 6f b9 97
+[  223.610667] mybrd: bio-info: len=4096 p=ffffea00000019c0 offset=0
+[  223.611098] mybrd: lookup: page-ffffea000019f040 index-1 sector-8
+[  223.611532] mybrd: copy: ffff880000067000 <- ffff8800067c1000 (4096-bytes)
+[  223.612004] mybrd: 20 b7 a3 3c 39 fc 3c 34
+[  223.612286] mybrd: 20 b7 a3 3c 39 fc 3c 34
+[  223.612573] mybrd: bio-info: len=4096 p=ffffea0000001c00 offset=0
+[  223.612993] mybrd: lookup: page-          (null) index--1 sector-16
+[  223.613469] mybrd: bio-info: len=4096 p=ffffea0000001c40 offset=0
+[  223.614061] mybrd: lookup: page-          (null) index--1 sector-24
+[  223.614616] mybrd: end mybrd_make_request
+1+0 records in
+1+0 records out
+4096 bytes (4.0KB) copied, 0.018910 seconds, 211.5KB/s
+/ # hexdump ./sec1 | head
+0000000 8005 7ef7 6f30 97b9 b274 cf50 551a 6683
+0000010 8679 e91c 339b 76b6 b04f 90c9 0328 c1af
+0000020 0bdf 3d40 0155 4c96 f11d 98c6 7874 0c90
+0000030 7e3c 965a 7c93 bd62 f0e7 655b 34d5 fbd8
+0000040 b5f9 44b3 199c 8830 cd43 8273 3eb2 4519
+0000050 f7c9 a2f7 aef1 27cf a277 bb4e 0741 ec88
+0000060 9840 6a42 f425 a73e 15ee 7a08 7412 c681
+0000070 2e1b 2ae5 6568 e7e1 b55b 960d 92de 5018
+0000080 78b9 26c7 bb19 dc56 9c69 d60f c703 8db8
+0000090 4ad2 c337 6c08 bcf6 37a6 8335 9d72 d3fb
+
+
+==== 27/10/2016 test write 1024, 4096 when there is no read handling in make_request ====
+* writing 1024 failed
+* writing 4096 succeeded
+
+/ # dd if=/dev/zero of=/dev/mybrd bs=512 count=2
+[   15.972041] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0 mybrd=ffff8800061cd240
+[   15.972744] CPU: 0 PID: 1003 Comm: dd Not tainted 4.4.0+ #8
+[   15.973174] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[   15.973909]  00000000ffffffff ffff880006643a78 ffffffff8130dadf ffff880006f0d900
+[   15.974441]  ffff880006643b10 ffffffff814fa17e ffff880006643aa8 ffffffff812f4aa6
+[   15.974919]  0000000000000008 00000000ffffffff ffff880006643b10 ffffffff812ed4d6
+[   15.975387] Call Trace:
+[   15.975545]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[   15.975854]  [<ffffffff814fa17e>] mybrd_make_request+0x3e/0x520
+[   15.976211]  [<ffffffff812f4aa6>] ? create_task_io_context+0x96/0xf0
+[   15.976595]  [<ffffffff812ed4d6>] ? generic_make_request_checks+0x316/0x320
+[   15.977012]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[   15.977373]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[   15.977743]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[   15.978058]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[   15.978434]  [<ffffffff8119fef8>] ll_rw_block+0x68/0xa0
+[   15.978753]  [<ffffffff811a038b>] __block_write_begin+0x3cb/0x480
+[   15.979118]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[   15.979418]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[   15.979722]  [<ffffffff811a0481>] block_write_begin+0x41/0x80
+[   15.980068]  [<ffffffff8112ffd6>] ? shmem_getxattr+0x46/0x60
+[   15.980410]  [<ffffffff811a27fe>] blkdev_write_begin+0x1e/0x20
+[   15.980766]  [<ffffffff8111a12a>] generic_perform_write+0xba/0x1a0
+[   15.981138]  [<ffffffff8118657c>] ? file_update_time+0x9c/0xf0
+[   15.981493]  [<ffffffff8111bc8b>] __generic_file_write_iter+0x18b/0x1e0
+[   15.981889]  [<ffffffff811a30fa>] blkdev_write_iter+0x7a/0x100
+[   15.982241]  [<ffffffff8116d8a5>] __vfs_write+0xa5/0xe0
+[   15.982605]  [<ffffffff8116e134>] vfs_write+0xa4/0x1a0
+[   15.983013]  [<ffffffff8116e06f>] ? vfs_read+0x10f/0x130
+[   15.983469]  [<ffffffff8116ed01>] SyS_write+0x41/0xa0
+[   15.983892]  [<ffffffff8188e9ae>] entry_SYSCALL_64_fastpath+0x12/0x71
+[   15.984410] mybrd: bio-info: sector=0 end_sector=8 rw=READ
+[   15.984818] mybrd: bio-info: end-io=ffffffff8119de20
+[   15.985170] mybrd: bio-info: len=4096 p=ffffea0000004300 offset=0
+dd: writing '/dev/mybrd': Input/output error
+1+0 records in
+0+0 records out
+0 bytes (0B) copied, 0.013877 seconds, 0B/s
+[   15.986480] dd (1003) used greatest stack depth: 13376 bytes left
+/ # dd if=/dev/zero of=/dev/mybrd bs=4096 count=2
+[   28.028103] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0 mybrd=ffff8800061cd240
+[   28.028922] CPU: 0 PID: 1007 Comm: dd Not tainted 4.4.0+ #8
+[   28.029338] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[   28.030103]  00000000ffffffff ffff8800066439e8 ffffffff8130dadf ffff880006238d80
+[   28.031091]  ffff880006643a80 ffffffff814fa17e ffff880006643a18 ffffffff812f4aa6
+[   28.032070]  0000000000000008 00000000ffffffff ffff880006643a80 ffffffff812ed4d6
+[   28.033058] Call Trace:
+[   28.033374]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[   28.034025]  [<ffffffff814fa17e>] mybrd_make_request+0x3e/0x520
+[   28.034772]  [<ffffffff812f4aa6>] ? create_task_io_context+0x96/0xf0
+[   28.035579]  [<ffffffff812ed4d6>] ? generic_make_request_checks+0x316/0x320
+[   28.036448]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[   28.037261]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[   28.038009]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[   28.038687]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[   28.039501]  [<ffffffff811a188d>] __block_write_full_page.constprop.43+0x10d/0x3a0
+[   28.040468]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[   28.041103]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[   28.041737]  [<ffffffff811a1c60>] block_write_full_page+0x140/0x160
+[   28.042302]  [<ffffffff811a2853>] blkdev_writepage+0x13/0x20
+[   28.042747]  [<ffffffff8112344e>] __writepage+0xe/0x30
+[   28.043141]  [<ffffffff81123e67>] write_cache_pages+0x1d7/0x4c0
+[   28.043575]  [<ffffffff8119e7a3>] ? __set_page_dirty.constprop.46+0x63/0xb0
+[   28.044068]  [<ffffffff81123440>] ? domain_dirty_limits+0x120/0x120
+[   28.044513]  [<ffffffff8111a4ee>] ? unlock_page+0x5e/0x60
+[   28.044883]  [<ffffffff8112418c>] generic_writepages+0x3c/0x60
+[   28.045378]  [<ffffffff81125ed9>] do_writepages+0x19/0x30
+[   28.045869]  [<ffffffff8111b2ec>] __filemap_fdatawrite_range+0x6c/0x90
+[   28.046430]  [<ffffffff8111b357>] filemap_write_and_wait+0x27/0x70
+[   28.047025]  [<ffffffff811a29e9>] __blkdev_put+0x69/0x220
+[   28.047427]  [<ffffffff811a3156>] ? blkdev_write_iter+0xd6/0x100
+[   28.047841]  [<ffffffff811a2f97>] blkdev_put+0x47/0x100
+[   28.048198]  [<ffffffff811a3070>] blkdev_close+0x20/0x30
+[   28.048562]  [<ffffffff8116f7e7>] __fput+0xd7/0x1e0
+[   28.048894]  [<ffffffff8116f929>] ____fput+0x9/0x10
+[   28.049229]  [<ffffffff810702ae>] task_work_run+0x6e/0x90
+[   28.049600]  [<ffffffff810021a2>] exit_to_usermode_loop+0x92/0xa0
+[   28.050020]  [<ffffffff81002b2e>] syscall_return_slowpath+0x4e/0x60
+[   28.050444]  [<ffffffff8188eb0c>] int_ret_from_sys_call+0x25/0x8f
+[   28.050863] mybrd: bio-info: sector=0 end_sector=8 rw=WRITE
+[   28.051238] mybrd: bio-info: end-io=ffffffff8119de20
+[   28.051580] mybrd: bio-info: len=4096 p=ffffea0000183340 offset=0
+[   28.051993] mybrd: lookup: page-          (null) index--1 sector-0
+[   28.052409] mybrd: lookup: page-          (null) index--1 sector-0
+[   28.052834] mybrd: insert: page-ffffea00001833c0 sector-0
+[   28.053151] mybrd: lookup: page-ffffea00001833c0 index-0 sector-0
+[   28.053589] mybrd: copy: ffff8800060cf000 <- ffff8800060cd000
+[   28.053978] mybrd: end mybrd_make_request
+[   28.054279] mybrd: start mybrd_make_request: block_device=ffff88000680b0c0 mybrd=ffff8800061cd240
+[   28.054960] CPU: 0 PID: 1007 Comm: dd Not tainted 4.4.0+ #8
+[   28.055381] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[   28.056080]  00000000ffffffff ffff8800066439e8 ffffffff8130dadf ffff880006238d80
+[   28.056739]  ffff880006643a80 ffffffff814fa17e ffff8800062de600 0000000000000000
+[   28.057348]  ffffea00001833c0 0000000000000000 ffffffff8111c670 0000000000000246
+[   28.057912] Call Trace:
+[   28.058119]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[   28.058488]  [<ffffffff814fa17e>] mybrd_make_request+0x3e/0x520
+[   28.058923]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[   28.059462]  [<ffffffff8111c670>] ? mempool_alloc_slab+0x10/0x20
+[   28.060000]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[   28.060758]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[   28.061252]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[   28.061742]  [<ffffffff811a188d>] __block_write_full_page.constprop.43+0x10d/0x3a0
+[   28.062324]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[   28.062671]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[   28.063102]  [<ffffffff811a1c60>] block_write_full_page+0x140/0x160
+[   28.063608]  [<ffffffff811a2853>] blkdev_writepage+0x13/0x20
+[   28.063997]  [<ffffffff8112344e>] __writepage+0xe/0x30
+[   28.064346]  [<ffffffff81123e67>] write_cache_pages+0x1d7/0x4c0
+[   28.064784]  [<ffffffff8119e7a3>] ? __set_page_dirty.constprop.46+0x63/0xb0
+[   28.065469]  [<ffffffff81123440>] ? domain_dirty_limits+0x120/0x120
+[   28.065968]  [<ffffffff8111a4ee>] ? unlock_page+0x5e/0x60
+[   28.066380]  [<ffffffff8112418c>] generic_writepages+0x3c/0x60
+[   28.066781]  [<ffffffff81125ed9>] do_writepages+0x19/0x30
+[   28.067213]  [<ffffffff8111b2ec>] __filemap_fdatawrite_range+0x6c/0x90
+[   28.067687]  [<ffffffff8111b357>] filemap_write_and_wait+0x27/0x70
+[   28.068108]  [<ffffffff811a29e9>] __blkdev_put+0x69/0x220
+[   28.068481]  [<ffffffff811a3156>] ? blkdev_write_iter+0xd6/0x100
+[   28.068895]  [<ffffffff811a2f97>] blkdev_put+0x47/0x100
+[   28.069249]  [<ffffffff811a3070>] blkdev_close+0x20/0x30
+[   28.069615]  [<ffffffff8116f7e7>] __fput+0xd7/0x1e0
+[   28.069951]  [<ffffffff8116f929>] ____fput+0x9/0x10
+[   28.070288]  [<ffffffff810702ae>] task_work_run+0x6e/0x90
+[   28.070666]  [<ffffffff810021a2>] exit_to_usermode_loop+0x92/0xa0
+[   28.071100]  [<ffffffff81002b2e>] syscall_return_slowpath+0x4e/0x60
+[   28.071557]  [<ffffffff8188eb0c>] int_ret_from_sys_call+0x25/0x8f
+[   28.071971] mybrd: bio-info: sector=8 end_sector=8 rw=WRITE
+[   28.072349] mybrd: bio-info: end-io=ffffffff8119de20
+[   28.072692] mybrd: bio-info: len=4096 p=ffffea0000197400 offset=0
+[   28.073103] mybrd: lookup: page-          (null) index--1 sector-8
+[   28.073526] mybrd: lookup: page-          (null) index--1 sector-8
+[   28.073952] mybrd: insert: page-ffffea0000182140 sector-8
+[   28.074339] mybrd: lookup: page-ffffea0000182140 index-1 sector-8
+[   28.074803] mybrd: copy: ffff880006085000 <- ffff8800065d0000
+[   28.075195] mybrd: end mybrd_make_request
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.047494 seconds, 168.4KB/s
+[   28.076193] dd (1007) used greatest stack depth: 13232 bytes left
+
+
+
