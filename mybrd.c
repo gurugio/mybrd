@@ -45,6 +45,7 @@ struct mybrd_device *global_mybrd;
 #define MYBRD_SIZE_1M 4*1024*1024
 
 #if 0
+// TODO: free all pages when drv is unloaded
 static void brd_free_all_pages(struct mybrd_device *mybrd)
 {
 	unsigned long pos = 0;
@@ -285,9 +286,7 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 	pr_warn("start mybrd_make_request: block_device=%p mybrd=%p\n",
 		bdev, mybrd);
 
-
-	// add dump_stack()
-	dump_stack();
+	//dump_stack();
 	
 	// print info of bio
 	sector = bio->bi_iter.bi_sector;
@@ -315,7 +314,7 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 		// when the kernel is going to read some data that userspace wrote, *and*
 		// when userspace is going to read some data that the kernel wrote.
 		
-		if (rw == READ) {
+		if (rw == READ || rw == READA) {
 			// kernel write data from kernelspace into userspace
 			err = copy_from_mybrd_to_user(mybrd,
 						      p,
