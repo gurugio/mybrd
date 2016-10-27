@@ -28,6 +28,13 @@
 
 MODULE_LICENSE("GPL");
 
+enum {
+	MYBRD_Q_BIO		= 0,
+	MYBRD_Q_RQ		= 1,
+	MYBRD_Q_MQ		= 2,
+};
+
+static int queue_mode = MYBRD_Q_MQ;
 
 struct mybrd_device {
 	int mybrd_number;
