@@ -42,7 +42,7 @@ struct mybrd_device {
 
 static int mybrd_major;
 struct mybrd_device *global_mybrd;
-#define MYBRD_SIZE_SECT 1024*2 // 1k*2*512 = 1Mb	
+#define MYBRD_SIZE_1M 4*1024*1024
 
 #if 0
 static void brd_free_all_pages(struct mybrd_device *mybrd)
@@ -136,13 +136,13 @@ static void show_data(unsigned char *ptr)
 		ptr[4],	ptr[5],	ptr[6], ptr[7]);
 }
 
-static int copy_to_mybrd(struct mybrd_device *mybrd,
+static int copy_from_user_to_mybrd(struct mybrd_device *mybrd,
 			 struct page *src_page,
 			 int len,
 			 unsigned int src_offset,
 			 sector_t sector)
 {
-	struct page *p;
+	struct page *dst_page;
 	void *dst;
 	unsigned int target_offset;
 	size_t copy;
@@ -162,8 +162,8 @@ static int copy_to_mybrd(struct mybrd_device *mybrd,
 	// copy = copy data in a page
 	copy = min_t(size_t, len, PAGE_SIZE - target_offset);
 
-	p = mybrd_lookup_page(mybrd, sector);
-	if (!p) {
+	dst_page = mybrd_lookup_page(mybrd, sector);
+	if (!dst_page) {
 		// First added data, need to make space to store data
 
 		// insert the first page
@@ -177,14 +177,14 @@ static int copy_to_mybrd(struct mybrd_device *mybrd,
 		}
 
 		// now it cannot fail
-		p = mybrd_lookup_page(mybrd, sector);
-		BUG_ON(!p);
+		dst_page = mybrd_lookup_page(mybrd, sector);
+		BUG_ON(!dst_page);
 	}
 
 	src = kmap(src_page);
 	src += src_offset;
 
-	dst = kmap(p);
+	dst = kmap(dst_page);
 	memcpy(dst + target_offset, src, copy);
 	kunmap(dst);
 
@@ -196,10 +196,10 @@ static int copy_to_mybrd(struct mybrd_device *mybrd,
 	if (copy < len) {
 		sector += (copy >> 9);
 		copy = len - copy;
-		p = mybrd_lookup_page(mybrd, sector);
-		BUG_ON(!p);
+		dst_page = mybrd_lookup_page(mybrd, sector);
+		BUG_ON(!dst_page);
 
-		dst = kmap(p); // next page
+		dst = kmap(dst_page); // next page
 		src += copy;
 
 		// dst: copy data at the first address of the page
@@ -216,13 +216,60 @@ static int copy_to_mybrd(struct mybrd_device *mybrd,
 	return 0;
 }
 
-static int copy_from_mybrd(struct mybrd_device *mybrd,
-			   struct page *dst_page,
-			   int len,
-			   unsigned int dst_offset,
-			   sector_t sector)
+static int copy_from_mybrd_to_user(struct mybrd_device *mybrd,
+				   struct page *dst_page,
+				   int len,
+				   unsigned int dst_offset,
+				   sector_t sector)
 {
+	struct page *src_page;
+	void *src;
+	size_t copy;
+	void *dst;
+	unsigned int src_offset;
 
+	src_offset = (sector & 0x7) << 9;
+	copy = min_t(size_t, len, PAGE_SIZE - src_offset);
+
+	dst = kmap(dst_page);
+	dst += dst_offset;
+	
+	src_page = mybrd_lookup_page(mybrd, sector);
+	if (src_page) {
+		src = kmap_atomic(src_page);
+		src += src_offset;
+		memcpy(dst, src, copy);
+		kunmap_atomic(src);
+
+		pr_warn("copy: %p <- %p (%d-bytes)\n", dst, src, (int)copy);
+		show_data(dst);
+		show_data(src);
+	} else {
+		pr_warn("copy: failed to find page\n");
+		memset(dst, 0, copy);
+	}
+
+	if (copy < len) {
+		dst += copy;
+		sector += (copy >> 9); // next sector
+		copy = len - copy; // remain data
+		src_page = mybrd_lookup_page(mybrd, sector);
+		if (src_page) {
+			src = kmap_atomic(src_page);
+			memcpy(dst, src, copy);
+			kunmap_atomic(src);
+
+			pr_warn("copy: %p <- %p (%d-bytes)\n", dst, src, (int)copy);
+			show_data(dst);
+			show_data(src);
+		} else {
+			pr_warn("copy: failed to find page\n");
+			memset(dst, 0, copy);
+		}
+	}
+
+	kunmap(dst);
+	return 0;
 }
 
 static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
@@ -270,11 +317,11 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 		
 		if (rw == READ) {
 			// kernel write data from kernelspace into userspace
-			err = copy_from_mybrd(mybrd,
-					      p,
-					      len,
-					      offset,
-					      sector);
+			err = copy_from_mybrd_to_user(mybrd,
+						      p,
+						      len,
+						      offset,
+						      sector);
 			if (err)
 				goto io_error;
 
@@ -285,13 +332,16 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 			// kernel is going to read data that userspace wrote,
 			// so flush-dcache is necessary
 			flush_dcache_page(page);
-			err = copy_to_mybrd(mybrd,
-					    p,
-					    len,
-					    offset,
-					    sector);
+			err = copy_from_user_to_mybrd(mybrd,
+						      p,
+						      len,
+						      offset,
+						      sector);
 			if (err)
 				goto io_error;
+		} else {
+			pr_warn("rw is not READ/WRITE\n");
+			goto io_error;
 		}
 
 		if (err)
@@ -389,7 +439,7 @@ static struct mybrd_device *mybrd_alloc(void)
 	disk->queue = mybrd->mybrd_queue;
 	disk->flags = GENHD_FL_EXT_DEVT;
 	strncpy(disk->disk_name, "mybrd", strlen("mybrd"));
-	set_capacity(disk, MYBRD_SIZE_SECT);
+	set_capacity(disk, MYBRD_SIZE_1M >> 9);
 	
 	pr_warn("end mybrd_alloc\n"); 
 	
