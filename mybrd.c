@@ -75,7 +75,8 @@ static struct page *mybrd_lookup_page(struct mybrd_device *mybrd,
 
 	rcu_read_unlock();
 
-	pr_warn("lookup-page: %d\n", p ? (int)p->index : -1);
+	pr_warn("lookup: page-%p index-%d sector-%d\n",
+		p, p ? (int)p->index : -1, (int)sector);
 	return p;
 }
 
@@ -96,7 +97,6 @@ static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 	if (!p)
 		return NULL;
 
-	
 	if (radix_tree_preload(GFP_NOIO)) {
 		__free_page(p);
 		return NULL;
@@ -115,8 +115,11 @@ static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 	if (radix_tree_insert(&mybrd->mybrd_pages, idx, p)) {
 		__free_page(p);
 		p = radix_tree_lookup(&mybrd->mybrd_pages, idx);
-		pr_warn("failed to inser page: duplicated=%d\n",
+		pr_warn("failed to insert page: duplicated=%d\n",
 			(int)idx);
+	} else {
+		pr_warn("insert: page-%p index=%d sector-%d\n",
+			p, (int)idx, (int)sector);
 	}
 
 	spin_unlock(&mybrd->mybrd_lock);
@@ -126,8 +129,14 @@ static struct page *mybrd_insert_page(struct mybrd_device *mybrd,
 	return p;
 }
 
+static void show_data(unsigned char *ptr)
+{
+	pr_warn("%x %x %x %x %x %x %x %x\n",
+		ptr[0], ptr[1], ptr[2], ptr[3],
+		ptr[4],	ptr[5],	ptr[6], ptr[7]);
+}
+
 static int copy_to_mybrd(struct mybrd_device *mybrd,
-			 /* const void *src, */
 			 struct page *src_page,
 			 int len,
 			 unsigned int src_offset,
@@ -178,6 +187,10 @@ static int copy_to_mybrd(struct mybrd_device *mybrd,
 	dst = kmap(p);
 	memcpy(dst + target_offset, src, copy);
 	kunmap(dst);
+
+	pr_warn("copy: %p <- %p (%d-bytes)\n", dst + target_offset, src, (int)copy);
+	show_data(dst+target_offset);
+	show_data(src);
 	
 	// copy next page
 	if (copy < len) {
@@ -193,10 +206,23 @@ static int copy_to_mybrd(struct mybrd_device *mybrd,
 		memcpy(dst, src, copy);
 		kunmap_atomic(dst);
 		kunmap(dst);
+
+		pr_warn("copy: %p <- %p (%d-bytes)\n", dst + target_offset, src, (int)copy);
+		show_data(dst);
+		show_data(src);
 	}
 	kunmap(src);
 
 	return 0;
+}
+
+static int copy_from_mybrd(struct mybrd_device *mybrd,
+			   struct page *dst_page,
+			   int len,
+			   unsigned int dst_offset,
+			   sector_t sector)
+{
+
 }
 
 static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
@@ -218,7 +244,7 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 	
 	// print info of bio
 	sector = bio->bi_iter.bi_sector;
-	end_sector = bio_sectors(bio);
+	end_sector = bio_end_sector(bio);
 	rw = bio_rw(bio);
 	pr_warn("bio-info: sector=%d end_sector=%d rw=%s\n",
 		(int)sector, (int)end_sector, rw == READ ? "READ" : "WRITE");
@@ -236,14 +262,36 @@ static blk_qc_t mybrd_make_request(struct request_queue *q, struct bio *bio)
 		pr_warn("bio-info: len=%u p=%p offset=%u\n",
 			len, p, offset);
 
+		// The reason of flush-dcache
+		// https://patchwork.kernel.org/patch/2742
+		// You have to call fluch_dcache_page() in two situations,
+		// when the kernel is going to read some data that userspace wrote, *and*
+		// when userspace is going to read some data that the kernel wrote.
+		
 		if (rw == READ) {
-			return -EPERM;
+			// kernel write data from kernelspace into userspace
+			err = copy_from_mybrd(mybrd,
+					      p,
+					      len,
+					      offset,
+					      sector);
+			if (err)
+				goto io_error;
+
+			// userspace is going to read data that the kernel just wrote
+			// so flush-dcache is necessary
+			flush_dcache_page(page);
 		} else if (rw == WRITE) {
+			// kernel is going to read data that userspace wrote,
+			// so flush-dcache is necessary
+			flush_dcache_page(page);
 			err = copy_to_mybrd(mybrd,
 					    p,
 					    len,
 					    offset,
 					    sector);
+			if (err)
+				goto io_error;
 		}
 
 		if (err)
