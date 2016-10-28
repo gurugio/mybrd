@@ -1,0 +1,463 @@
+[    0.218396] brd: module loaded
+[    0.218636] mybrd: mybrd major=253
+[    0.218917] mybrd: start mybrd_alloc
+[    0.219199] mybrd: create queue: RequestQueue-base
+[    0.219668] mybrd: start request_fn: q=ffff880000048000 irqmode=0
+[    0.220122] CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.4.0+ #23
+[    0.220575] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.221294]  ffff880000048000 ffff880006d038c8 ffffffff8130dadf ffff880000048000
+[    0.221874]  ffff880006d038e8 ffffffff814fa120 ffff880000048000 ffff880000048000
+[    0.222489]  ffff880006d03900 ffffffff812ebe6e ffff880000048000 ffff880006d03938
+[    0.223071] Call Trace:
+[    0.223263]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.223650]  [<ffffffff814fa120>] mybrd_request_fn+0x20/0xa0
+[    0.224082]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.224503]  [<ffffffff812eab6a>] __elv_add_request+0xfa/0x290
+[    0.224942]  [<ffffffff812f1913>] blk_queue_bio+0x323/0x330
+[    0.225363]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.225822]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.226204]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.226671]  [<ffffffff8119fdef>] block_read_full_page+0x24f/0x2f0
+[    0.227140]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[    0.227517]  [<ffffffff8111a96b>] ? __add_to_page_cache_locked+0x11b/0x1b0
+[    0.228035]  [<ffffffff811a2820>] ? blkdev_readpages+0x20/0x20
+[    0.228472]  [<ffffffff811a2833>] blkdev_readpage+0x13/0x20
+[    0.228854]  [<ffffffff8111ad08>] do_read_cache_page+0x78/0x1a0
+[    0.229282]  [<ffffffff8111ae44>] read_cache_page+0x14/0x20
+[    0.229662]  [<ffffffff81301358>] read_dev_sector+0x28/0x90
+[    0.230080]  [<ffffffff813043f6>] read_lba+0x126/0x1e0
+[    0.230467]  [<ffffffff81304ab7>] efi_partition+0xe7/0x720
+[    0.230882]  [<ffffffff81318fec>] ? vsnprintf+0x24c/0x510
+[    0.231302]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.231699]  [<ffffffff813049d0>] ? compare_gpts+0x260/0x260
+[    0.232038]  [<ffffffff813025e9>] check_partition+0x139/0x220
+[    0.232431]  [<ffffffff81301b63>] rescan_partitions+0xb3/0x2a0
+[    0.232840]  [<ffffffff811a2e22>] __blkdev_get+0x282/0x3b0
+[    0.233252]  [<ffffffff811a3ae2>] blkdev_get+0x112/0x300
+[    0.233647]  [<ffffffff81185fae>] ? unlock_new_inode+0x3e/0x70
+[    0.234077]  [<ffffffff811a26fc>] ? bdget+0x10c/0x120
+[    0.234449]  [<ffffffff814dbc32>] ? put_device+0x12/0x20
+[    0.234846]  [<ffffffff812ff921>] add_disk+0x3e1/0x470
+[    0.235241]  [<ffffffff812ffbc2>] ? alloc_disk_node+0x102/0x130
+[    0.235684]  [<ffffffff81f7d865>] ? brd_init+0x153/0x153
+[    0.236101]  [<ffffffff81f7da21>] mybrd_init+0x1bc/0x253
+[    0.236526]  [<ffffffff810003b1>] do_one_initcall+0x81/0x1b0
+[    0.236946]  [<ffffffff81f3b08e>] kernel_init_freeable+0x158/0x1e3
+[    0.237412]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.237811]  [<ffffffff818897d9>] kernel_init+0x9/0xe0
+[    0.238195]  [<ffffffff8188f1cf>] ret_from_fork+0x3f/0x70
+[    0.238607]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.239055] mybrd: start prep_rq_fn: q=ffff880000048000 req=ffff88000673a560
+[    0.239573] CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.4.0+ #23
+[    0.240016] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.240712]  ffff8800063274c0 ffff880006d03868 ffffffff8130dadf ffff88000673a560
+[    0.241304]  ffff880006d03888 ffffffff814fa0a8 ffff880000048000 ffff88000673a560
+[    0.241907]  ffff880006d038b0 ffffffff812f11d8 ffff880000048000 ffff880000048000
+[    0.242499] Call Trace:
+[    0.242684]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.243092]  [<ffffffff814fa0a8>] mybrd_prep_rq_fn+0x28/0x80
+[    0.243508]  [<ffffffff812f11d8>] blk_peek_request+0x158/0x260
+[    0.243960]  [<ffffffff812f12ea>] blk_fetch_request+0xa/0x20
+[    0.244405]  [<ffffffff814fa128>] mybrd_request_fn+0x28/0xa0
+[    0.244822]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.245232]  [<ffffffff812eab6a>] __elv_add_request+0xfa/0x290
+[    0.245661]  [<ffffffff812f1913>] blk_queue_bio+0x323/0x330
+[    0.246072]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.246520]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.246904]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.247360]  [<ffffffff8119fdef>] block_read_full_page+0x24f/0x2f0
+[    0.247836]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[    0.248202]  [<ffffffff8111a96b>] ? __add_to_page_cache_locked+0x11b/0x1b0
+[    0.248704]  [<ffffffff811a2820>] ? blkdev_readpages+0x20/0x20
+[    0.249132]  [<ffffffff811a2833>] blkdev_readpage+0x13/0x20
+[    0.249542]  [<ffffffff8111ad08>] do_read_cache_page+0x78/0x1a0
+[    0.249976]  [<ffffffff8111ae44>] read_cache_page+0x14/0x20
+[    0.250387]  [<ffffffff81301358>] read_dev_sector+0x28/0x90
+[    0.250799]  [<ffffffff813043f6>] read_lba+0x126/0x1e0
+[    0.251181]  [<ffffffff81304ab7>] efi_partition+0xe7/0x720
+[    0.251593]  [<ffffffff81318fec>] ? vsnprintf+0x24c/0x510
+[    0.251988]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.252365]  [<ffffffff813049d0>] ? compare_gpts+0x260/0x260
+[    0.252801]  [<ffffffff813025e9>] check_partition+0x139/0x220
+[    0.253225]  [<ffffffff81301b63>] rescan_partitions+0xb3/0x2a0
+[    0.253654]  [<ffffffff811a2e22>] __blkdev_get+0x282/0x3b0
+[    0.254056]  [<ffffffff811a3ae2>] blkdev_get+0x112/0x300
+[    0.254447]  [<ffffffff81185fae>] ? unlock_new_inode+0x3e/0x70
+[    0.254874]  [<ffffffff811a26fc>] ? bdget+0x10c/0x120
+[    0.255250]  [<ffffffff814dbc32>] ? put_device+0x12/0x20
+[    0.255637]  [<ffffffff812ff921>] add_disk+0x3e1/0x470
+[    0.256022]  [<ffffffff812ffbc2>] ? alloc_disk_node+0x102/0x130
+[    0.256461]  [<ffffffff81f7d865>] ? brd_init+0x153/0x153
+[    0.256843]  [<ffffffff81f7da21>] mybrd_init+0x1bc/0x253
+[    0.257236]  [<ffffffff810003b1>] do_one_initcall+0x81/0x1b0
+[    0.257653]  [<ffffffff81f3b08e>] kernel_init_freeable+0x158/0x1e3
+[    0.258106]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.258489]  [<ffffffff818897d9>] kernel_init+0x9/0xe0
+[    0.258869]  [<ffffffff8188f1cf>] ret_from_fork+0x3f/0x70
+[    0.259271]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.259656] mybrd: prep-request: len=4096 disk=ffff880006f52000 start_time=4294667446 end_io=          (null)
+[    0.260382] mybrd: end prep_rq_fn
+[    0.260631] mybrd: fetch-request: req=ffff88000673a560 len=4096 disk=ffff880006f52000 start_time=4294667446 end_io=          (null)
+[    0.261510] mybrd: end request_fn
+[    0.261760] mybrd: start request_fn: q=ffff880000048000 irqmode=0
+[    0.262210] CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.4.0+ #23
+[    0.262653] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.263297]  ffff88000673a560 ffff880006d03900 ffffffff8130dadf ffff880000048000
+[    0.263813]  ffff880006d03920 ffffffff814fa120 ffff880000048000 ffff88000673a560
+[    0.264388]  ffff880006d03938 ffffffff812ebe6e ffff880000048000 ffff880006d03980
+[    0.264934] Call Trace:
+[    0.265102]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.265483]  [<ffffffff814fa120>] mybrd_request_fn+0x20/0xa0
+[    0.265891]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.266299]  [<ffffffff812f191b>] blk_queue_bio+0x32b/0x330
+[    0.266759]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.267250]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.267643]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.268101]  [<ffffffff8119fdef>] block_read_full_page+0x24f/0x2f0
+[    0.268580]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[    0.268960]  [<ffffffff8111a96b>] ? __add_to_page_cache_locked+0x11b/0x1b0
+[    0.269458]  [<ffffffff811a2820>] ? blkdev_readpages+0x20/0x20
+[    0.269895]  [<ffffffff811a2833>] blkdev_readpage+0x13/0x20
+[    0.270321]  [<ffffffff8111ad08>] do_read_cache_page+0x78/0x1a0
+[    0.270770]  [<ffffffff8111ae44>] read_cache_page+0x14/0x20
+[    0.271170]  [<ffffffff81301358>] read_dev_sector+0x28/0x90
+[    0.271607]  [<ffffffff813043f6>] read_lba+0x126/0x1e0
+[    0.271975]  [<ffffffff81304ab7>] efi_partition+0xe7/0x720
+[    0.272408]  [<ffffffff81318fec>] ? vsnprintf+0x24c/0x510
+[    0.272806]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.273147]  [<ffffffff813049d0>] ? compare_gpts+0x260/0x260
+[    0.273563]  [<ffffffff813025e9>] check_partition+0x139/0x220
+[    0.273984]  [<ffffffff81301b63>] rescan_partitions+0xb3/0x2a0
+[    0.274437]  [<ffffffff811a2e22>] __blkdev_get+0x282/0x3b0
+[    0.274789]  [<ffffffff811a3ae2>] blkdev_get+0x112/0x300
+[    0.275194]  [<ffffffff81185fae>] ? unlock_new_inode+0x3e/0x70
+[    0.275618]  [<ffffffff811a26fc>] ? bdget+0x10c/0x120
+[    0.276009]  [<ffffffff814dbc32>] ? put_device+0x12/0x20
+[    0.276420]  [<ffffffff812ff921>] add_disk+0x3e1/0x470
+[    0.276812]  [<ffffffff812ffbc2>] ? alloc_disk_node+0x102/0x130
+[    0.277262]  [<ffffffff81f7d865>] ? brd_init+0x153/0x153
+[    0.277711]  [<ffffffff81f7da21>] mybrd_init+0x1bc/0x253
+[    0.278060]  [<ffffffff810003b1>] do_one_initcall+0x81/0x1b0
+[    0.278433]  [<ffffffff81f3b08e>] kernel_init_freeable+0x158/0x1e3
+[    0.278914]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.279310]  [<ffffffff818897d9>] kernel_init+0x9/0xe0
+[    0.279699]  [<ffffffff8188f1cf>] ret_from_fork+0x3f/0x70
+[    0.280109]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.280508] mybrd: end request_fn
+[    0.280955] mybrd: start request_fn: q=ffff880000048000 irqmode=0
+[    0.281438] CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.4.0+ #23
+[    0.281893] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.282603]  ffff880000048000 ffff880006d03960 ffffffff8130dadf ffff880000048000
+[    0.283184]  ffff880006d03980 ffffffff814fa120 ffff880000048000 ffff880000048000
+[    0.283740]  ffff880006d03998 ffffffff812ebe6e ffff880000048000 ffff880006d039d0
+[    0.284306] Call Trace:
+[    0.284489]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.284868]  [<ffffffff814fa120>] mybrd_request_fn+0x20/0xa0
+[    0.285283]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.285690]  [<ffffffff812eab6a>] __elv_add_request+0xfa/0x290
+[    0.286117]  [<ffffffff812f1913>] blk_queue_bio+0x323/0x330
+[    0.286524]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.286956]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.287339]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.287791]  [<ffffffff8119fdef>] block_read_full_page+0x24f/0x2f0
+[    0.288243]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[    0.288609]  [<ffffffff8111a96b>] ? __add_to_page_cache_locked+0x11b/0x1b0
+[    0.289154]  [<ffffffff811a2820>] ? blkdev_readpages+0x20/0x20
+[    0.289583]  [<ffffffff811a2833>] blkdev_readpage+0x13/0x20
+[    0.289991]  [<ffffffff8111ad08>] do_read_cache_page+0x78/0x1a0
+[    0.290425]  [<ffffffff8111ae44>] read_cache_page+0x14/0x20
+[    0.290833]  [<ffffffff81301358>] read_dev_sector+0x28/0x90
+[    0.291255]  [<ffffffff81302783>] amiga_partition+0x53/0x410
+[    0.291692]  [<ffffffff81303fe0>] ? sgi_partition+0x190/0x190
+[    0.292124]  [<ffffffff81304298>] ? sun_partition+0x2b8/0x2f0
+[    0.292554]  [<ffffffff81303e3a>] ? osf_partition+0x15a/0x170
+[    0.292974]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.293352]  [<ffffffff81302730>] ? put_partition+0x60/0x60
+[    0.293762]  [<ffffffff813025e9>] check_partition+0x139/0x220
+[    0.294183]  [<ffffffff81301b63>] rescan_partitions+0xb3/0x2a0
+[    0.294589]  [<ffffffff811a2e22>] __blkdev_get+0x282/0x3b0
+[    0.294922]  [<ffffffff811a3ae2>] blkdev_get+0x112/0x300
+[    0.295264]  [<ffffffff81185fae>] ? unlock_new_inode+0x3e/0x70
+[    0.295658]  [<ffffffff811a26fc>] ? bdget+0x10c/0x120
+[    0.296017]  [<ffffffff814dbc32>] ? put_device+0x12/0x20
+[    0.296451]  [<ffffffff812ff921>] add_disk+0x3e1/0x470
+[    0.296820]  [<ffffffff812ffbc2>] ? alloc_disk_node+0x102/0x130
+[    0.297257]  [<ffffffff81f7d865>] ? brd_init+0x153/0x153
+[    0.297634]  [<ffffffff81f7da21>] mybrd_init+0x1bc/0x253
+[    0.298052]  [<ffffffff810003b1>] do_one_initcall+0x81/0x1b0
+[    0.298485]  [<ffffffff81f3b08e>] kernel_init_freeable+0x158/0x1e3
+[    0.298892]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.299241]  [<ffffffff818897d9>] kernel_init+0x9/0xe0
+[    0.299618]  [<ffffffff8188f1cf>] ret_from_fork+0x3f/0x70
+[    0.300020]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.300415] mybrd: start prep_rq_fn: q=ffff880000048000 req=ffff88000673a560
+[    0.300885] CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.4.0+ #23
+[    0.301341] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.302007]  ffff8800063274c0 ffff880006d03900 ffffffff8130dadf ffff88000673a560
+[    0.302563]  ffff880006d03920 ffffffff814fa0a8 ffff880000048000 ffff88000673a560
+[    0.303105]  ffff880006d03948 ffffffff812f11d8 ffff880000048000 ffff880000048000
+[    0.303657] Call Trace:
+[    0.303845]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.304235]  [<ffffffff814fa0a8>] mybrd_prep_rq_fn+0x28/0x80
+[    0.304677]  [<ffffffff812f11d8>] blk_peek_request+0x158/0x260
+[    0.305119]  [<ffffffff812f12ea>] blk_fetch_request+0xa/0x20
+[    0.305549]  [<ffffffff814fa128>] mybrd_request_fn+0x28/0xa0
+[    0.305990]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.306439]  [<ffffffff812eab6a>] __elv_add_request+0xfa/0x290
+[    0.306883]  [<ffffffff812f1913>] blk_queue_bio+0x323/0x330
+[    0.307321]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.307714]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.308071]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.308482]  [<ffffffff8119fdef>] block_read_full_page+0x24f/0x2f0
+[    0.308914]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[    0.309224]  [<ffffffff8111a96b>] ? __add_to_page_cache_locked+0x11b/0x1b0
+[    0.309737]  [<ffffffff811a2820>] ? blkdev_readpages+0x20/0x20
+[    0.310126]  [<ffffffff811a2833>] blkdev_readpage+0x13/0x20
+[    0.310486]  [<ffffffff8111ad08>] do_read_cache_page+0x78/0x1a0
+[    0.310939]  [<ffffffff8111ae44>] read_cache_page+0x14/0x20
+[    0.311318]  [<ffffffff81301358>] read_dev_sector+0x28/0x90
+[    0.311682]  [<ffffffff81302783>] amiga_partition+0x53/0x410
+[    0.312070]  [<ffffffff81303fe0>] ? sgi_partition+0x190/0x190
+[    0.312486]  [<ffffffff81304298>] ? sun_partition+0x2b8/0x2f0
+[    0.312864]  [<ffffffff81303e3a>] ? osf_partition+0x15a/0x170
+[    0.313226]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.313564]  [<ffffffff81302730>] ? put_partition+0x60/0x60
+[    0.313929]  [<ffffffff813025e9>] check_partition+0x139/0x220
+[    0.314376]  [<ffffffff81301b63>] rescan_partitions+0xb3/0x2a0
+[    0.314758]  [<ffffffff811a2e22>] __blkdev_get+0x282/0x3b0
+[    0.315149]  [<ffffffff811a3ae2>] blkdev_get+0x112/0x300
+[    0.315499]  [<ffffffff81185fae>] ? unlock_new_inode+0x3e/0x70
+[    0.315926]  [<ffffffff811a26fc>] ? bdget+0x10c/0x120
+[    0.316296]  [<ffffffff814dbc32>] ? put_device+0x12/0x20
+[    0.316685]  [<ffffffff812ff921>] add_disk+0x3e1/0x470
+[    0.317037]  [<ffffffff812ffbc2>] ? alloc_disk_node+0x102/0x130
+[    0.317493]  [<ffffffff81f7d865>] ? brd_init+0x153/0x153
+[    0.317882]  [<ffffffff81f7da21>] mybrd_init+0x1bc/0x253
+[    0.318231]  [<ffffffff810003b1>] do_one_initcall+0x81/0x1b0
+[    0.318603]  [<ffffffff81f3b08e>] kernel_init_freeable+0x158/0x1e3
+[    0.319066]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.319456]  [<ffffffff818897d9>] kernel_init+0x9/0xe0
+[    0.319846]  [<ffffffff8188f1cf>] ret_from_fork+0x3f/0x70
+[    0.320257]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.320628] mybrd: prep-request: len=4096 disk=ffff880006f52000 start_time=4294667507 end_io=          (null)
+[    0.321370] mybrd: end prep_rq_fn
+[    0.321624] mybrd: fetch-request: req=ffff88000673a560 len=4096 disk=ffff880006f52000 start_time=4294667507 end_io=          (null)
+[    0.322537] mybrd: end request_fn
+[    0.322783] mybrd: start request_fn: q=ffff880000048000 irqmode=0
+[    0.323200] CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.4.0+ #23
+[    0.323583] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.324173]  ffff88000673a560 ffff880006d03998 ffffffff8130dadf ffff880000048000
+[    0.324695]  ffff880006d039b8 ffffffff814fa120 ffff880000048000 ffff88000673a560
+[    0.325209]  ffff880006d039d0 ffffffff812ebe6e ffff880000048000 ffff880006d03a18
+[    0.325737] Call Trace:
+[    0.325897]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.326216]  [<ffffffff814fa120>] mybrd_request_fn+0x20/0xa0
+[    0.326558]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.326884]  [<ffffffff812f191b>] blk_queue_bio+0x32b/0x330
+[    0.327277]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.327770]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.328133]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.328599]  [<ffffffff8119fdef>] block_read_full_page+0x24f/0x2f0
+[    0.329032]  [<ffffffff811a1e50>] ? I_BDEV+0x10/0x10
+[    0.329376]  [<ffffffff8111a96b>] ? __add_to_page_cache_locked+0x11b/0x1b0
+[    0.329886]  [<ffffffff811a2820>] ? blkdev_readpages+0x20/0x20
+[    0.330260]  [<ffffffff811a2833>] blkdev_readpage+0x13/0x20
+[    0.330633]  [<ffffffff8111ad08>] do_read_cache_page+0x78/0x1a0
+[    0.331167]  [<ffffffff8111ae44>] read_cache_page+0x14/0x20
+[    0.331566]  [<ffffffff81301358>] read_dev_sector+0x28/0x90
+[    0.331979]  [<ffffffff81302783>] amiga_partition+0x53/0x410
+[    0.332370]  [<ffffffff81303fe0>] ? sgi_partition+0x190/0x190
+[    0.332780]  [<ffffffff81304298>] ? sun_partition+0x2b8/0x2f0
+[    0.333174]  [<ffffffff81303e3a>] ? osf_partition+0x15a/0x170
+[    0.333565]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.333932]  [<ffffffff81302730>] ? put_partition+0x60/0x60
+[    0.334329]  [<ffffffff813025e9>] check_partition+0x139/0x220
+[    0.334718]  [<ffffffff81301b63>] rescan_partitions+0xb3/0x2a0
+[    0.335131]  [<ffffffff811a2e22>] __blkdev_get+0x282/0x3b0
+[    0.335507]  [<ffffffff811a3ae2>] blkdev_get+0x112/0x300
+[    0.335858]  [<ffffffff81185fae>] ? unlock_new_inode+0x3e/0x70
+[    0.336260]  [<ffffffff811a26fc>] ? bdget+0x10c/0x120
+[    0.336603]  [<ffffffff814dbc32>] ? put_device+0x12/0x20
+[    0.336991]  [<ffffffff812ff921>] add_disk+0x3e1/0x470
+[    0.337348]  [<ffffffff812ffbc2>] ? alloc_disk_node+0x102/0x130
+[    0.337750]  [<ffffffff81f7d865>] ? brd_init+0x153/0x153
+[    0.338104]  [<ffffffff81f7da21>] mybrd_init+0x1bc/0x253
+[    0.338461]  [<ffffffff810003b1>] do_one_initcall+0x81/0x1b0
+[    0.338861]  [<ffffffff81f3b08e>] kernel_init_freeable+0x158/0x1e3
+[    0.339370]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.339730]  [<ffffffff818897d9>] kernel_init+0x9/0xe0
+[    0.340087]  [<ffffffff8188f1cf>] ret_from_fork+0x3f/0x70
+[    0.340451]  [<ffffffff818897d0>] ? rest_init+0x80/0x80
+[    0.340792] mybrd: end request_fn
+[    0.341107] mybrd: end mybrd_alloc
+[    0.341333] mybrd: global-mybrd=ffff8800063274c0
+[    0.341681] mybrd: 
+[    0.341681] 
+[    0.341681] 
+[    0.341681] mybrd: module loaded
+[    0.341681] 
+[    0.341681] 
+[    0.341681] 
+[    0.343140] loop: module loaded
+[    0.344051] scsi host0: ata_piix
+[    0.344378] scsi host1: ata_piix
+[    0.344635] ata1: PATA max MWDMA2 cmd 0x1f0 ctl 0x3f6 bmdma 0xc040 irq 14
+[    0.345115] ata2: PATA max MWDMA2 cmd 0x170 ctl 0x376 bmdma 0xc048 irq 15
+[    0.345827] e100: Intel(R) PRO/100 Network Driver, 3.5.24-k2-NAPI
+[    0.346242] e100: Copyright(c) 1999-2006 Intel Corporation
+[    0.346749] e1000: Intel(R) PRO/1000 Network Driver - version 7.3.21-k8-NAPI
+[    0.347235] e1000: Copyright (c) 1999-2006 Intel Corporation.
+[    0.358991] ACPI: PCI Interrupt Link [LNKC] enabled at IRQ 11
+[    0.618261] ata2.00: ATAPI: QEMU DVD-ROM, 2.3.0, max UDMA/100
+[    0.618909] ata2.00: configured for MWDMA2
+[    0.619461] scsi 1:0:0:0: CD-ROM            QEMU     QEMU DVD-ROM     2.3. PQ: 0 ANSI: 5
+[    0.630655] sr 1:0:0:0: [sr0] scsi3-mmc drive: 4x/4x cd/rw xa/form2 tray
+[    0.631253] cdrom: Uniform CD-ROM driver Revision: 3.20
+[    0.631954] sr 1:0:0:0: Attached scsi generic sg0 type 5
+[    0.644652] e1000 0000:00:03.0 eth0: (PCI:33MHz:32-bit) 52:54:00:12:34:56
+[    0.645105] e1000 0000:00:03.0 eth0: Intel(R) PRO/1000 Network Connection
+[    0.645732] sky2: driver version 1.30
+[    0.646102] ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+[    0.646561] ehci-pci: EHCI PCI platform driver
+[    0.646887] ohci_hcd: USB 1.1 'Open' Host Controller (OHCI) Driver
+[    0.647288] ohci-pci: OHCI PCI platform driver
+[    0.647747] uhci_hcd: USB Universal Host Controller Interface driver
+[    0.648329] usbcore: registered new interface driver usblp
+[    0.648791] usbcore: registered new interface driver usb-storage
+[    0.649238] i8042: PNP: PS/2 Controller [PNP0303:KBD,PNP0f13:MOU] at 0x60,0x64 irq 1,12
+[    0.650287] serio: i8042 KBD port at 0x60,0x64 irq 1
+[    0.650665] serio: i8042 AUX port at 0x60,0x64 irq 12
+[    0.651172] mousedev: PS/2 mouse device common for all mice
+[    0.651774] input: AT Translated Set 2 keyboard as /devices/platform/i8042/serio0/input/input1
+[    0.653218] rtc_cmos 00:00: RTC can wake from S4
+[    0.653687] rtc_cmos 00:00: rtc core: registered rtc_cmos as rtc0
+[    0.654208] rtc_cmos 00:00: alarms up to one day, 114 bytes nvram, hpet irqs
+[    0.654823] device-mapper: ioctl: 4.34.0-ioctl (2015-10-28) initialised: dm-devel@redhat.com
+[    0.655443] hidraw: raw HID events driver (C) Jiri Kosina
+[    0.655991] usbcore: registered new interface driver usbhid
+[    0.656391] usbhid: USB HID core driver
+[    0.656815] Netfilter messages via NETLINK v0.30.
+[    0.657138] nf_conntrack version 0.5.0 (864 buckets, 3456 max)
+[    0.657636] ctnetlink v0.93: registering with nfnetlink.
+[    0.658078] ip_tables: (C) 2000-2006 Netfilter Core Team
+[    0.658695] Initializing XFRM netlink socket
+[    0.659082] NET: Registered protocol family 10
+[    0.659513] ip6_tables: (C) 2000-2006 Netfilter Core Team
+[    0.659936] sit: IPv6 over IPv4 tunneling driver
+[    0.660394] NET: Registered protocol family 17
+[    0.660698] 9pnet: Installing 9P2000 support
+[    0.661092] Key type dns_resolver registered
+[    0.661541] microcode: CPU0 sig=0x306c3, pf=0x1, revision=0x1
+[    0.661980] microcode: Microcode Update Driver: v2.01 <tigran@aivazian.fsnet.co.uk>, Peter Oruba
+[    0.662694] registered taskstats version 1
+[    0.663083]   Magic number: 4:299:739
+[    0.663370] console [netcon0] enabled
+[    0.663606] netconsole: network logging started
+[    0.663947] ALSA device list:
+[    0.664171]   No soundcards found.
+[    0.665132] Freeing unused kernel memory: 1140K (ffffffff81f23000 - ffffffff82040000)
+[    0.665689] Write protecting the kernel read-only data: 14336k
+[    0.666536] Freeing unused kernel memory: 1448K (ffff880001896000 - ffff880001a00000)
+[    0.668952] Freeing unused kernel memory: 1300K (ffff880001cbb000 - ffff880001e00000)
+[    0.676924] mdev (991) used greatest stack depth: 14088 bytes left
+
+Boot took 0.60 seconds
+
+[    0.678175] mybrd: start mybrd_probe
+[    0.678505] mybrd: end mybrd_probe: ret=ffff880006f52080
+[    0.678942] mybrd: start mybrd_probe
+[    0.679216] mybrd: end mybrd_probe: ret=ffff880006f52080
+[    0.679660] mybrd: start request_fn: q=ffff880000048000 irqmode=0
+[    0.680052] CPU: 0 PID: 993 Comm: mount Not tainted 4.4.0+ #23
+[    0.680451] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.681118]  ffff88000673aac0 ffff880006313b18 ffffffff8130dadf ffff880000048000
+[    0.681676]  ffff880006313b38 ffffffff814fa120 ffff880000048000 ffff88000673aac0
+[    0.682186]  ffff880006313b50 ffffffff812ebe6e ffff880000048000 ffff880006313b98
+[    0.682717] Call Trace:
+[    0.682889]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.683236]  [<ffffffff814fa120>] mybrd_request_fn+0x20/0xa0
+[    0.683615]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.683991]  [<ffffffff812f191b>] blk_queue_bio+0x32b/0x330
+[    0.684381]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.684781]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.685114]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.685640]  [<ffffffff8119fb1a>] __bread_gfp+0x4a/0xd0
+[    0.686014]  [<ffffffff8120a8c6>] ext4_fill_super+0x1c6/0x3300
+[    0.686402]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.686737]  [<ffffffff81170e9b>] mount_bdev+0x17b/0x1b0
+[    0.687109]  [<ffffffff8120a700>] ? ext4_calculate_overhead+0x360/0x360
+[    0.687543]  [<ffffffff811fcc00>] ext4_mount+0x10/0x20
+[    0.687876]  [<ffffffff81171823>] mount_fs+0x33/0x160
+[    0.688211]  [<ffffffff81138760>] ? __alloc_percpu+0x10/0x20
+[    0.688572]  [<ffffffff8118b092>] vfs_kern_mount+0x62/0x100
+[    0.688945]  [<ffffffff8118d438>] do_mount+0x218/0xd80
+[    0.689317]  [<ffffffff811688f8>] ? __kmalloc_track_caller+0x108/0x180
+[    0.689797]  [<ffffffff81134041>] ? strndup_user+0x41/0xa0
+[    0.690160]  [<ffffffff81133fcd>] ? memdup_user+0x3d/0x70
+[    0.690514]  [<ffffffff8118e2c7>] SyS_mount+0x87/0xd0
+[    0.690847]  [<ffffffff8188ee6e>] entry_SYSCALL_64_fastpath+0x12/0x71
+[    0.691291] mybrd: start prep_rq_fn: q=ffff880000048000 req=ffff88000673aac0
+[    0.691765] CPU: 0 PID: 993 Comm: mount Not tainted 4.4.0+ #23
+[    0.692176] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.692795]  ffff8800063274c0 ffff880006313ab8 ffffffff8130dadf ffff88000673aac0
+[    0.693340]  ffff880006313ad8 ffffffff814fa0a8 ffff880000048000 ffff88000673aac0
+[    0.693862]  ffff880006313b00 ffffffff812f11d8 ffff880000048000 ffff88000673aac0
+[    0.694458] Call Trace:
+[    0.694631]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.694975]  [<ffffffff814fa0a8>] mybrd_prep_rq_fn+0x28/0x80
+[    0.695354]  [<ffffffff812f11d8>] blk_peek_request+0x158/0x260
+[    0.695742]  [<ffffffff812f12ea>] blk_fetch_request+0xa/0x20
+[    0.696111]  [<ffffffff814fa128>] mybrd_request_fn+0x28/0xa0
+[    0.696480]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.696834]  [<ffffffff812f191b>] blk_queue_bio+0x32b/0x330
+[    0.697216]  [<ffffffff812efc8e>] generic_make_request+0xce/0x1a0
+[    0.697608]  [<ffffffff812efdc2>] submit_bio+0x62/0x140
+[    0.697950]  [<ffffffff8119fa78>] submit_bh_wbc.isra.38+0xf8/0x130
+[    0.698346]  [<ffffffff8119fb1a>] __bread_gfp+0x4a/0xd0
+[    0.698714]  [<ffffffff8120a8c6>] ext4_fill_super+0x1c6/0x3300
+[    0.699094]  [<ffffffff81319339>] ? snprintf+0x39/0x40
+[    0.699439]  [<ffffffff81170e9b>] mount_bdev+0x17b/0x1b0
+[    0.699794]  [<ffffffff8120a700>] ? ext4_calculate_overhead+0x360/0x360
+[    0.700214]  [<ffffffff811fcc00>] ext4_mount+0x10/0x20
+[    0.700535]  [<ffffffff81171823>] mount_fs+0x33/0x160
+[    0.700869]  [<ffffffff81138760>] ? __alloc_percpu+0x10/0x20
+[    0.701228]  [<ffffffff8118b092>] vfs_kern_mount+0x62/0x100
+[    0.701624]  [<ffffffff8118d438>] do_mount+0x218/0xd80
+[    0.701957]  [<ffffffff811688f8>] ? __kmalloc_track_caller+0x108/0x180
+[    0.702396]  [<ffffffff81134041>] ? strndup_user+0x41/0xa0
+[    0.702756]  [<ffffffff81133fcd>] ? memdup_user+0x3d/0x70
+[    0.703147]  [<ffffffff8118e2c7>] SyS_mount+0x87/0xd0
+[    0.703470]  [<ffffffff8188ee6e>] entry_SYSCALL_64_fastpath+0x12/0x71
+[    0.703886] mybrd: prep-request: len=4096 disk=ffff880006f52000 start_time=4294667906 end_io=          (null)
+[    0.704533] mybrd: end prep_rq_fn
+[    0.704760] mybrd: fetch-request: req=ffff88000673aac0 len=4096 disk=ffff880006f52000 start_time=4294667906 end_io=          (null)
+[    0.705559] mybrd: end request_fn
+mount: mounting /dev/vda on /mnt failed: Invalid argument
+[    0.706187] mount (993) used greatest stack depth: 13440 bytes left
+/bin/sh: can't access tty; job control turned off
+/ # [    0.707237] mybrd: start request_fn: q=ffff880000048000 irqmode=0
+[    0.707600] CPU: 0 PID: 5 Comm: kworker/0:0H Not tainted 4.4.0+ #23
+[    0.708028] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[    0.708883] Workqueue: kblockd cfq_kick_queue
+[    0.709208]  ffff880006e19d20 ffff880006d2bdc8 ffffffff8130dadf ffff880000048000
+[    0.709740]  ffff880006d2bde8 ffffffff814fa120 ffff880000048000 ffff880006e19d20
+[    0.710381]  ffff880006d2be00 ffffffff812ebe6e ffff880000048000 ffff880006d2be20
+[    0.711053] Call Trace:
+[    0.711218]  [<ffffffff8130dadf>] dump_stack+0x44/0x55
+[    0.711595]  [<ffffffff814fa120>] mybrd_request_fn+0x20/0xa0
+[    0.711964]  [<ffffffff812ebe6e>] __blk_run_queue+0x2e/0x40
+[    0.712342]  [<ffffffff8130829a>] cfq_kick_queue+0x2a/0x40
+[    0.712711]  [<ffffffff8106c450>] process_one_work+0x1a0/0x430
+[    0.713103]  [<ffffffff8106c726>] worker_thread+0x46/0x4a0
+[    0.713461]  [<ffffffff8106c6e0>] ? process_one_work+0x430/0x430
+[    0.713851]  [<ffffffff81071ac4>] kthread+0xc4/0xe0
+[    0.714167]  [<ffffffff81071a00>] ? kthread_worker_fn+0x170/0x170
+[    0.714563]  [<ffffffff8188f1cf>] ret_from_fork+0x3f/0x70
+[    0.714936]  [<ffffffff81071a00>] ? kthread_worker_fn+0x170/0x170
+[    0.715336] mybrd: end request_fn
+[    1.181417] tsc: Refined TSC clocksource calibration: 3591.589 MHz
+[    1.181921] clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x33c549aca23, max_idle_ns: 440795339673 ns
+[    1.252957] input: ImExPS/2 Generic Explorer Mouse as /devices/platform/i8042/serio1/input/input3
+QEMU 2.3.0 monitor - type 'help' for more information
+(qemu) quit
+
