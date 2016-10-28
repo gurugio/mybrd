@@ -406,20 +406,53 @@ static int mybrd_prep_rq_fn(struct request_queue *q, struct request *req)
 static void mybrd_request_fn(struct request_queue *q)
 {
 	struct request *req;
+	struct bio_vec bvec;
+	struct req_iterator iter;
+	unsigned int len;
+	struct page *p;
+	unsigned int offset;
+	sector_t sector;
+	struct mybrd_device *mybrd = q->queuedata;
+	int err;
 
 	pr_warn("start request_fn: q=%p irqmode=%d\n", q, irqmode);
 	//dump_stack();
 	
 	while ((req = blk_fetch_request(q)) != NULL) {
-		pr_warn("fetch-request: req=%p len=%d disk=%p start_time=%lu end_io=%p\n",
-			req, (int)req->__data_len, req->rq_disk,
-			req->start_time, req->end_io);
+		pr_warn("  fetch-request: req=%p len=%d rw=%s\n",
+			req, (int)blk_rq_bytes(req),
+			rq_data_dir(req) ? "WRITE":"READ");
 		
 		spin_unlock_irq(q->queue_lock);
 
 		switch (irqmode) {
 		case MYBRD_IRQ_NONE:
+			sector = blk_rq_pos(req); // initial sector
 
+			rq_for_each_segment(bvec, req, iter) {
+				len = bvec.bv_len;
+				p = bvec.bv_page;
+				offset = bvec.bv_offset;
+				pr_warn("    bio-info: len=%u p=%p offset=%u\n",
+					len, p, offset);
+
+				if (rq_data_dir(req)) { // WRITE
+					flush_dcache_page(page);
+					err = copy_from_user_to_mybrd(mybrd,
+								      p,
+								      len,
+								      offset,
+								      sector);
+					if (err) {
+						// BUGBUG: how to handle error??
+						pr_warn("failed to write page\n");
+					}
+					sector += (len >> 9);
+				} else { // READ
+					pr_warn("\n\n\n no impl READ\n\n\n");
+				}
+			}
+			
 			blk_end_request_all(req, 0); // finish the request
 
 			// BUGBUG: do not understand
