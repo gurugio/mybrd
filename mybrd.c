@@ -182,7 +182,7 @@ static int copy_from_user_to_mybrd(struct mybrd_device *mybrd,
 
 	dst = kmap(dst_page);
 	memcpy(dst + target_offset, src, copy);
-	kunmap(dst);
+	kunmap(dst_page);
 
 	pr_warn("copy: %p <- %p (%d-bytes)\n", dst + target_offset, src, (int)copy);
 	show_data(dst+target_offset);
@@ -201,13 +201,13 @@ static int copy_from_user_to_mybrd(struct mybrd_device *mybrd,
 		// dst: copy data at the first address of the page
 		memcpy(dst, src, copy);
 		kunmap_atomic(dst);
-		kunmap(dst);
+		kunmap(dst_page);
 
 		pr_warn("copy: %p <- %p (%d-bytes)\n", dst + target_offset, src, (int)copy);
 		show_data(dst);
 		show_data(src);
 	}
-	kunmap(src);
+	kunmap(src_page);
 
 	return 0;
 }
@@ -241,8 +241,9 @@ static int copy_from_mybrd_to_user(struct mybrd_device *mybrd,
 		show_data(dst);
 		show_data(src);
 	} else {
-		pr_warn("copy: failed to find page\n");
 		memset(dst, 0, copy);
+		pr_warn("copy: %p <- 0 (%d-bytes)\n", dst, (int)copy);
+		show_data(dst);
 	}
 
 	if (copy < len) {
@@ -259,12 +260,13 @@ static int copy_from_mybrd_to_user(struct mybrd_device *mybrd,
 			show_data(dst);
 			show_data(src);
 		} else {
-			pr_warn("copy: failed to find page\n");
 			memset(dst, 0, copy);
+			pr_warn("copy: %p <- 0 (%d-bytes)\n", dst, (int)copy);
+			show_data(dst);
 		}
 	}
 
-	kunmap(dst);
+	kunmap(dst_page);
 	return 0;
 }
 
@@ -403,16 +405,61 @@ static int mybrd_prep_rq_fn(struct request_queue *q, struct request *req)
 	return BLKPREP_OK;
 }
 
-static void mybrd_request_fn(struct request_queue *q)
+static int _mybrd_request_fn_rw(struct request *req)
 {
-	struct request *req;
 	struct bio_vec bvec;
 	struct req_iterator iter;
 	unsigned int len;
 	struct page *p;
 	unsigned int offset;
 	sector_t sector;
-	struct mybrd_device *mybrd = q->queuedata;
+	struct mybrd_device *mybrd = req->q->queuedata;
+	int err;
+	
+	sector = blk_rq_pos(req); // initial sector
+
+	rq_for_each_segment(bvec, req, iter) {
+		len = bvec.bv_len;
+		p = bvec.bv_page;
+		offset = bvec.bv_offset;
+		pr_warn("    sector=%d bio-info: len=%u p=%p offset=%u\n",
+			(int)sector, len, p, offset);
+
+		if (rq_data_dir(req)) { // WRITE
+			flush_dcache_page(page);
+			err = copy_from_user_to_mybrd(mybrd,
+						      p,
+						      len,
+						      offset,
+						      sector);
+			if (err) {
+				pr_warn("    request_fn: failed to"
+					"write sector\n");
+				goto io_error;
+			}
+		} else { // READ
+			err = copy_from_mybrd_to_user(mybrd,
+						      p,
+						      len,
+						      offset,
+						      sector);
+			if (err) {
+				pr_warn("    request_fn: failed to"
+					"read sector\n");
+				goto io_error;
+			}
+			flush_dcache_page(page);
+		}
+		sector += (len >> 9);
+	}
+	return 0;
+io_error:
+	return -EIO;
+}
+
+static void mybrd_request_fn(struct request_queue *q)
+{
+	struct request *req;
 	int err;
 
 	pr_warn("start request_fn: q=%p irqmode=%d\n", q, irqmode);
@@ -425,36 +472,10 @@ static void mybrd_request_fn(struct request_queue *q)
 		
 		spin_unlock_irq(q->queue_lock);
 
+		// BUGBUG: No lock for request??
 		switch (irqmode) {
 		case MYBRD_IRQ_NONE:
-			sector = blk_rq_pos(req); // initial sector
-
-			rq_for_each_segment(bvec, req, iter) {
-				len = bvec.bv_len;
-				p = bvec.bv_page;
-				offset = bvec.bv_offset;
-				pr_warn("    bio-info: len=%u p=%p offset=%u\n",
-					len, p, offset);
-
-				if (rq_data_dir(req)) { // WRITE
-					flush_dcache_page(page);
-					err = copy_from_user_to_mybrd(mybrd,
-								      p,
-								      len,
-								      offset,
-								      sector);
-					if (err) {
-						// BUGBUG: how to handle error??
-						pr_warn("failed to write page\n");
-					}
-					sector += (len >> 9);
-				} else { // READ
-					pr_warn("\n\n\n no impl READ\n\n\n");
-				}
-			}
-			
-			blk_end_request_all(req, 0); // finish the request
-
+			err = _mybrd_request_fn_rw(req);
 			// BUGBUG: do not understand
 			/* if (request_mode == MYBRD_Q_RQ && blk_queue_stopped(q)) { */
 			/* 	unsigned long flags; */
@@ -468,8 +489,9 @@ static void mybrd_request_fn(struct request_queue *q)
 			// not impl yet
 			break;
 		}
-		
-		spin_lock_irq(q->queue_lock);
+
+		blk_end_request_all(req, err); // finish the request
+		spin_lock_irq(q->queue_lock); // lock q before fetching request
 	}
 	pr_warn("end request_fn\n");
 }
