@@ -379,11 +379,6 @@ static const struct block_device_operations mybrd_fops = {
  */
 static int irqmode = MYBRD_IRQ_NONE/* MYBRD_IRQ_SOFTIRQ */;
 
-static void mybrd_softirq_done_fn(struct request *req)
-{
-	blk_end_request_all(req, 0);
-}
-
 static int mybrd_prep_rq_fn(struct request_queue *q, struct request *req)
 {
 	struct mybrd_device *mybrd = q->queuedata;
@@ -392,7 +387,6 @@ static int mybrd_prep_rq_fn(struct request_queue *q, struct request *req)
 	//dump_stack();
 	
 	if (req->special) {
-		//req->errors = ILLEGAL_REQUEST;
 		return BLKPREP_KILL;
 	}
 
@@ -415,6 +409,11 @@ static int _mybrd_request_fn_rw(struct request *req)
 	sector_t sector;
 	struct mybrd_device *mybrd = req->q->queuedata;
 	int err;
+
+	if (req->special != req->q->queuedata) {
+		pr_warn("\nunknown request error\n\n");
+		goto io_error;
+	}
 	
 	sector = blk_rq_pos(req); // initial sector
 
@@ -457,25 +456,36 @@ io_error:
 	return -EIO;
 }
 
+static void mybrd_softirq_done_fn(struct request *req)
+{
+	int err;
+	pr_warn("start softirq_done_fn: complete delayed request: %p", req);
+	err = _mybrd_request_fn_rw(req);
+	blk_end_request_all(req, err);
+	pr_warn("end softirq_done_fn\n");
+}
+
 static void mybrd_request_fn(struct request_queue *q)
 {
 	struct request *req;
-	int err;
+	int err = 0;
 
 	pr_warn("start request_fn: q=%p irqmode=%d\n", q, irqmode);
 	//dump_stack();
-	
+
+	// blk_fetch_request() extracts the request from the queue
+	// so the req->queuelist should be empty
 	while ((req = blk_fetch_request(q)) != NULL) {
+		spin_unlock_irq(q->queue_lock);
+
 		pr_warn("  fetch-request: req=%p len=%d rw=%s\n",
 			req, (int)blk_rq_bytes(req),
 			rq_data_dir(req) ? "WRITE":"READ");
 		
-		spin_unlock_irq(q->queue_lock);
-
-		// BUGBUG: No lock for request??
 		switch (irqmode) {
 		case MYBRD_IRQ_NONE:
 			err = _mybrd_request_fn_rw(req);
+			blk_end_request_all(req, err); // finish the request
 			// BUGBUG: do not understand
 			/* if (request_mode == MYBRD_Q_RQ && blk_queue_stopped(q)) { */
 			/* 	unsigned long flags; */
@@ -486,11 +496,11 @@ static void mybrd_request_fn(struct request_queue *q)
 			/* } */
 			break;
 		case MYBRD_IRQ_SOFTIRQ:
-			// not impl yet
+			pr_warn("request-fn: add request into per-cpu list blk_cpu_done\n");
+			blk_complete_request(req);
 			break;
 		}
 
-		blk_end_request_all(req, err); // finish the request
 		spin_lock_irq(q->queue_lock); // lock q before fetching request
 	}
 	pr_warn("end request_fn\n");
