@@ -47,6 +47,7 @@ struct mybrd_sw_queue {
 	unsigned long *tag_map;
 	wait_queue_head_t wait;
 	unsigned int queue_depth;
+	struct mybrd_device *mybrd;
 };
 
 struct mybrd_device {
@@ -529,19 +530,32 @@ static int mybrd_queue_rq(struct blk_mq_hw_ctx *hctx,
 			  const struct blk_mq_queue_data *bd)
 {
 	struct request *req = bd->rq;
-	struct mybrd_sw_queue *swqueue = hctx->driver_data;
+	struct mybrd_sw_queue *sw_queue = hctx->driver_data;
 
-	// TODO: check what "PDU" is and where "PDU" is set
+	// When request is allocated,
+	// it allocated sizeof(request) + tag_set.cmd_size
+	// for request-specific data
+	// We only set the size of pdu to sizeof(struct mybrd_device)
+	// mybrd_device is NOT passed in pdu!!
 	struct mybrd_device *mybrd = blk_mq_rq_to_pdu(bd->rq);
 
-	pr_warn("start queue_rq: mybrd-%p request-%p sw_queue-%p\n",
-		mybrd, req, swqueue);
-	dump_stack();
+	*mybrd = *(sw_queue->mybrd); // copy mybrd object
+
+	pr_warn("start queue_rq: request-%p sw_queue-%p request->special=%p\n",
+		req, sw_queue, req->special);
+	pr_warn("mybrd_number=%d nr_queue=%d queue_depth=%d\n",
+		mybrd->mybrd_number, mybrd->nr_queues, mybrd->queue_depth);
+	
+	//dump_stack();
 	
 	blk_mq_start_request(req);
 
-	// BUGBUG: do nothing yet
-
+	req->special = sw_queue->mybrd; // for _mybrd_request_fn_rw()
+	pr_warn("queue-rq: req=%p len=%d rw=%s\n",
+		req, (int)blk_rq_bytes(req),
+		rq_data_dir(req) ? "WRITE":"READ");
+	_mybrd_request_fn_rw(req);
+	
 	blk_mq_end_request(req, 0);
 
 	pr_warn("end queue_rq\n");
@@ -558,14 +572,18 @@ static int mybrd_init_hctx(struct blk_mq_hw_ctx *hctx,
 	BUG_ON(!mybrd);
 	BUG_ON(!sw_queue);
 	
-	pr_warn("start init_hctx: mybrd=%p sw_queue[%d]=%p\n",
+	pr_warn("start init_hctx: hctx=%p mybrd=%p sw_queue[%d]=%p\n",
 		mybrd, index, sw_queue);
 	dump_stack();
 
-	hctx->driver_data = sw_queue; // 1:1?
+	// init hctx
+	// We set tag_set.nr_hw_queue to the same with nr_submit_queues
+	// So 1:1 matching for sw-q and hw-q
+	hctx->driver_data = sw_queue;
 
-	init_waitqueue_head(&sw_queue->wait);
+	// init custom sw_queue
 	sw_queue->queue_depth = mybrd->queue_depth;
+	sw_queue->mybrd = mybrd;
 	mybrd->nr_queues++;
 
 	pr_warn("end init_hctx\n");
@@ -614,7 +632,9 @@ static struct mybrd_device *mybrd_alloc(void)
 		blk_queue_prep_rq(mybrd->mybrd_queue, mybrd_prep_rq_fn);
 		blk_queue_softirq_done(mybrd->mybrd_queue, mybrd_softirq_done_fn);
 	} else if (queue_mode == MYBRD_Q_MQ) {
-		nr_submit_queues = nr_online_nodes;
+		// create two sw-queues and two hw-queues
+		// check hw-q creation at mybrd_mq_ops.init_hctx
+		nr_submit_queues = 2;
 		mybrd->sw_queues = kzalloc(nr_submit_queues *
 					   sizeof(struct mybrd_sw_queue),
 					   GFP_KERNEL);
