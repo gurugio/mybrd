@@ -66,7 +66,7 @@ struct mybrd_device {
 };
 
 
-static int queue_mode = MYBRD_Q_RQ;
+static int queue_mode = MYBRD_Q_MQ;/* MYBRD_Q_RQ; */
 static int mybrd_major;
 struct mybrd_device *global_mybrd;
 #define MYBRD_SIZE_1M 4*1024*1024
@@ -595,8 +595,7 @@ static struct mybrd_device *mybrd_alloc(void)
 	INIT_RADIX_TREE(&mybrd->mybrd_pages, GFP_ATOMIC);
 
 
-	pr_warn("create queue: %s\n",
-		queue_mode == MYBRD_Q_BIO ? "BIO-base" : "RequestQueue-base");
+	pr_warn("create queue: %d\n", queue_mode);
 
 	if (queue_mode == MYBRD_Q_BIO) {
 		// null_blk uses blk_alloc_queue_node()
@@ -736,10 +735,10 @@ static struct kobject *mybrd_probe(dev_t dev, int *part, void *data)
 
 static int __init mybrd_init(void)
 {
-	if (queue_mode != MYBRD_Q_RQ) {
-		pr_warn("\n\n\nMUST BE REQUEST-QUEUE MODE\n\n\n");
-		return 0;
-	}
+	/* if (queue_mode != MYBRD_Q_RQ) { */
+	/* 	pr_warn("\n\n\nMUST BE REQUEST-QUEUE MODE\n\n\n"); */
+	/* 	return 0; */
+	/* } */
 	
 	mybrd_major = register_blkdev(mybrd_major, "my-ramdisk");
 	if (mybrd_major < 0)
