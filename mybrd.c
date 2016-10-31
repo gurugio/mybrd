@@ -20,6 +20,8 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <asm/uaccess.h>
+#include <linux/blk-mq.h>
+#include <linux/nodemask.h>
 
 #ifdef pr_warn
 #undef pr_warn
@@ -40,6 +42,13 @@ enum {
 	MYBRD_IRQ_TIMER		= 2,
 };
 
+
+struct mybrd_sw_queue {
+	unsigned long *tag_map;
+	wait_queue_head_t wait;
+	unsigned int queue_depth;
+};
+
 struct mybrd_device {
 	int mybrd_number;
 
@@ -48,6 +57,12 @@ struct mybrd_device {
 
 	spinlock_t mybrd_lock;
 	struct radix_tree_root mybrd_pages;
+
+	// for mq
+	struct mybrd_sw_queue *sw_queues;
+	struct blk_mq_tag_set tag_set;
+	unsigned int queue_depth;
+	unsigned int nr_queues;
 };
 
 
@@ -55,6 +70,9 @@ static int queue_mode = MYBRD_Q_RQ;
 static int mybrd_major;
 struct mybrd_device *global_mybrd;
 #define MYBRD_SIZE_1M 4*1024*1024
+// sw submit queues for per-cpu or per-node
+static int nr_submit_queues;
+static int hw_queue_depth = 64;
 
 
 static struct page *mybrd_lookup_page(struct mybrd_device *mybrd,
@@ -506,10 +524,66 @@ static void mybrd_request_fn(struct request_queue *q)
 	pr_warn("end request_fn\n");
 }
 
+
+static int mybrd_queue_rq(struct blk_mq_hw_ctx *hctx,
+			  const struct blk_mq_queue_data *bd)
+{
+	struct request *req = bd->rq;
+	struct mybrd_sw_queue *swqueue = hctx->driver_data;
+
+	// TODO: check what "PDU" is and where "PDU" is set
+	struct mybrd_device *mybrd = blk_mq_rq_to_pdu(bd->rq);
+
+	pr_warn("start queue_rq: mybrd-%p request-%p sw_queue-%p\n",
+		mybrd, req, swqueue);
+	dump_stack();
+	
+	blk_mq_start_request(req);
+
+	// BUGBUG: do nothing yet
+
+	blk_mq_end_request(req, 0);
+
+	pr_warn("end queue_rq\n");
+	return BLK_MQ_RQ_QUEUE_OK;
+}
+
+static int mybrd_init_hctx(struct blk_mq_hw_ctx *hctx,
+			   void *data,
+			   unsigned int index)
+{
+	struct mybrd_device *mybrd = data;
+	struct mybrd_sw_queue *sw_queue = &mybrd->sw_queues[index];
+
+	BUG_ON(!mybrd);
+	BUG_ON(!sw_queue);
+	
+	pr_warn("start init_hctx: mybrd=%p sw_queue[%d]=%p\n",
+		mybrd, index, sw_queue);
+	dump_stack();
+
+	hctx->driver_data = sw_queue; // 1:1?
+
+	init_waitqueue_head(&sw_queue->wait);
+	sw_queue->queue_depth = mybrd->queue_depth;
+	mybrd->nr_queues++;
+
+	pr_warn("end init_hctx\n");
+	return 0;
+}
+
+static struct blk_mq_ops mybrd_mq_ops = {
+	.queue_rq = mybrd_queue_rq,
+	.map_queue = blk_mq_map_queue,
+	.init_hctx = mybrd_init_hctx,
+	.complete = mybrd_softirq_done_fn, // share mq-mode and request-mode
+};
+
 static struct mybrd_device *mybrd_alloc(void)
 {
 	struct mybrd_device *mybrd;
 	struct gendisk *disk;
+	int ret;
 
 	pr_warn("start mybrd_alloc\n");
 	mybrd = kzalloc(sizeof(*mybrd), GFP_KERNEL);
@@ -540,6 +614,42 @@ static struct mybrd_device *mybrd_alloc(void)
 		}
 		blk_queue_prep_rq(mybrd->mybrd_queue, mybrd_prep_rq_fn);
 		blk_queue_softirq_done(mybrd->mybrd_queue, mybrd_softirq_done_fn);
+	} else if (queue_mode == MYBRD_Q_MQ) {
+		nr_submit_queues = nr_online_nodes;
+		mybrd->sw_queues = kzalloc(nr_submit_queues *
+					   sizeof(struct mybrd_sw_queue),
+					   GFP_KERNEL);
+		if (!mybrd->sw_queues) {
+			pr_warn("failed to create queues for mq-mode\n");
+			goto out_free_brd;
+		}
+
+		mybrd->nr_queues = 0;
+		mybrd->queue_depth = hw_queue_depth;
+		
+		// struct blk_mq_tag_set
+		mybrd->tag_set.ops = &mybrd_mq_ops;
+		// 1:1 for submit-queue and hw-queue
+		mybrd->tag_set.nr_hw_queues = nr_submit_queues;
+		// queue depth for each hw queue
+		mybrd->tag_set.queue_depth = hw_queue_depth;
+		mybrd->tag_set.numa_node = NUMA_NO_NODE;
+		// cmd_size: per-request extra data
+		mybrd->tag_set.cmd_size = sizeof(struct mybrd_device);
+		mybrd->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
+		mybrd->tag_set.driver_data = mybrd;
+
+		ret = blk_mq_alloc_tag_set(&mybrd->tag_set);
+		if (ret) {
+			pr_warn("failed to allocate tag-set\n");
+			goto out_free_queue;
+		}
+			
+		mybrd->mybrd_queue = blk_mq_init_queue(&mybrd->tag_set);
+		if (IS_ERR(mybrd->mybrd_queue)) {
+			pr_warn("failed to init queue for mq-mode\n");
+			goto out_free_tag;
+		}
 	}
 
 	mybrd->mybrd_queue->queuedata = mybrd;
@@ -590,9 +700,15 @@ static struct mybrd_device *mybrd_alloc(void)
 	pr_warn("end mybrd_alloc\n");
 	
 	return mybrd;
-
+out_free_tag:
+	if (queue_mode == MYBRD_Q_MQ)
+		blk_mq_free_tag_set(&mybrd->tag_set);
 out_free_queue:
-	blk_cleanup_queue(mybrd->mybrd_queue);
+	if (queue_mode == MYBRD_Q_MQ) {
+		kfree(mybrd->sw_queues);
+	} else {
+		blk_cleanup_queue(mybrd->mybrd_queue);
+	}
 out_free_brd:
 	kfree(mybrd);
 out:
