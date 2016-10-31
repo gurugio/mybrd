@@ -595,7 +595,7 @@ static struct mybrd_device *mybrd_alloc(void)
 	INIT_RADIX_TREE(&mybrd->mybrd_pages, GFP_ATOMIC);
 
 
-	pr_warn("create queue: %d\n", queue_mode);
+	pr_warn("create queue: mybrd-%p queue-mode-%d\n", mybrd, queue_mode);
 
 	if (queue_mode == MYBRD_Q_BIO) {
 		// null_blk uses blk_alloc_queue_node()
@@ -621,6 +621,12 @@ static struct mybrd_device *mybrd_alloc(void)
 		if (!mybrd->sw_queues) {
 			pr_warn("failed to create queues for mq-mode\n");
 			goto out_free_brd;
+		}
+		pr_warn("create %d-queues:\n", nr_submit_queues);
+		{
+			int i;
+			for (i = 0; i < nr_submit_queues; i++)
+				pr_warn("sw_queues[%d]: %p\n", i, &mybrd->sw_queues[i]);
 		}
 
 		mybrd->nr_queues = 0;
