@@ -63,7 +63,7 @@ struct mybrd_device {
 	struct mybrd_sw_queue *sw_queues;
 	struct blk_mq_tag_set tag_set;
 	unsigned int queue_depth;
-	unsigned int nr_queues;
+	unsigned int nr_hw_queues;
 };
 
 
@@ -505,17 +505,10 @@ static void mybrd_request_fn(struct request_queue *q)
 		case MYBRD_IRQ_NONE:
 			err = _mybrd_request_fn_rw(req);
 			blk_end_request_all(req, err); // finish the request
-			// BUGBUG: do not understand
-			/* if (request_mode == MYBRD_Q_RQ && blk_queue_stopped(q)) { */
-			/* 	unsigned long flags; */
-
-			/* 	spin_lock_irqsave(q->queue_lock, flags); */
-			/* 	blk_start_queue_async(q); */
-			/* 	spin_unlock_irqrestore(q->queue_lock, flags); */
-			/* } */
 			break;
 		case MYBRD_IRQ_SOFTIRQ:
-			pr_warn("request-fn: add request into per-cpu list blk_cpu_done\n");
+			// pass request into per-cpu list blk_cpu_done
+			// softirq_done_fn will be called for each request
 			blk_complete_request(req);
 			break;
 		}
@@ -525,7 +518,7 @@ static void mybrd_request_fn(struct request_queue *q)
 	pr_warn("end request_fn\n");
 }
 
-
+// hw-queue: submit IOs into hw
 static int mybrd_queue_rq(struct blk_mq_hw_ctx *hctx,
 			  const struct blk_mq_queue_data *bd)
 {
@@ -539,14 +532,14 @@ static int mybrd_queue_rq(struct blk_mq_hw_ctx *hctx,
 	// mybrd_device is NOT passed in pdu!!
 	struct mybrd_device *mybrd = blk_mq_rq_to_pdu(bd->rq);
 
-	*mybrd = *(sw_queue->mybrd); // copy mybrd object
+	*mybrd = *(sw_queue->mybrd); // copy mybrd object for test
 
 	pr_warn("start queue_rq: request-%p sw_queue-%p request->special=%p\n",
 		req, sw_queue, req->special);
 	pr_warn("mybrd_number=%d nr_queue=%d queue_depth=%d\n",
-		mybrd->mybrd_number, mybrd->nr_queues, mybrd->queue_depth);
+		mybrd->mybrd_number, mybrd->nr_hw_queues, mybrd->queue_depth);
 	
-	//dump_stack();
+	dump_stack();
 	
 	blk_mq_start_request(req);
 
@@ -573,7 +566,9 @@ static int mybrd_init_hctx(struct blk_mq_hw_ctx *hctx,
 	BUG_ON(!sw_queue);
 	
 	pr_warn("start init_hctx: hctx=%p mybrd=%p sw_queue[%d]=%p\n",
-		mybrd, index, sw_queue);
+		hctx, mybrd, index, sw_queue);
+	pr_warn("info hctx: numa_node=%d queue_num=%d queue->%p\n",
+		(int)hctx->numa_node, (int)hctx->queue_num, hctx->queue);
 	dump_stack();
 
 	// init hctx
@@ -584,7 +579,7 @@ static int mybrd_init_hctx(struct blk_mq_hw_ctx *hctx,
 	// init custom sw_queue
 	sw_queue->queue_depth = mybrd->queue_depth;
 	sw_queue->mybrd = mybrd;
-	mybrd->nr_queues++;
+	mybrd->nr_hw_queues++;
 
 	pr_warn("end init_hctx\n");
 	return 0;
@@ -649,7 +644,7 @@ static struct mybrd_device *mybrd_alloc(void)
 				pr_warn("sw_queues[%d]: %p\n", i, &mybrd->sw_queues[i]);
 		}
 
-		mybrd->nr_queues = 0;
+		mybrd->nr_hw_queues = 0; // inc later in init_hctx()
 		mybrd->queue_depth = hw_queue_depth;
 		
 		// struct blk_mq_tag_set
