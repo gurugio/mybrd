@@ -24,17 +24,6 @@ MODULE_LICENSE("GPL");
 static int mybrd_major;
 
 
-static struct kobject *mybrd_probe(dev_t dev, int *part, void *data)
-{
-	struct kobject *kobj;
-
-	pr_warn("start mybrd_probe\n");
-	*part = 0;
-	kobj = NULL;
-	pr_warn("end mybrd_probe: ret=%p\n", kobj);
-	return kobj;
-}
-
 static int __init mybrd_init(void)
 {
 	mybrd_major = register_blkdev(0, "my-ramdisk");
@@ -42,18 +31,12 @@ static int __init mybrd_init(void)
 		return mybrd_major;
 	pr_warn("mybrd major=%d\n", mybrd_major);
 
-	blk_register_region(MKDEV(mybrd_major, 0), 1UL << MINORBITS,
-			    THIS_MODULE,
-			    mybrd_probe,
-			    NULL, NULL);
-	
 	pr_warn("\n\n\nmybrd: module loaded\n\n\n\n");
 	return 0;
 }
 
 static void __exit mybrd_exit(void)
 {
-	blk_unregister_region(MKDEV(mybrd_major, 0), 1UL << MINORBITS);
 	unregister_blkdev(mybrd_major, "my-ramdisk");
 	pr_warn("brd: module unloaded\n");
 }
