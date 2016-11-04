@@ -433,10 +433,6 @@ static void mybrd_softirq_done_fn(struct request *req)
 	int err;
 	pr_warn("start softirq_done_fn: complete delayed request: %p", req);
 	INIT_LIST_HEAD(&req->queuelist);
-	if (list_empty(&req->queuelist))
-		pr_warn("empty\n");
-	else
-		pr_warn("!empty\n");
 	err = _mybrd_request_fn(req);
 	blk_end_request_all(req, err);
 	pr_warn("end softirq_done_fn\n");
@@ -468,8 +464,6 @@ static void mybrd_request_fn(struct request_queue *q)
 			blk_complete_request(req);
 			break;
 		}
-
-		blk_end_request_all(req, err); // finish the request
 
 		spin_lock_irq(q->queue_lock);
 	}
