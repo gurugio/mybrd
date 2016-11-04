@@ -69,7 +69,7 @@ static blk_qc_t mybrd_make_request_fn(struct request_queue *q, struct bio *bio)
 	struct bvec_iter iter;
 	unsigned long start_time = jiffies;
 
-	pr_warn("start mybrd_make_request: block_device=%p mybrd=%p\n",
+	pr_warn("start mybrd_make_request_fn: block_device=%p mybrd=%p\n",
 		bdev, mybrd);
 	//dump_stack();
 
