@@ -372,6 +372,7 @@ static struct mybrd_device *mybrd_alloc(void)
 		goto out;
 
 	spin_lock_init(&mybrd->mybrd_lock);
+	INIT_RADIX_TREE(&mybrd->mybrd_pages, GFP_ATOMIC);
 	pr_warn("create mybrd:%p\n", mybrd);
 
 	/*
