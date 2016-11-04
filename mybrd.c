@@ -227,26 +227,6 @@ static int copy_from_mybrd_to_user(struct mybrd_device *mybrd,
 		show_data(dst);
 	}
 
-	if (copy < len) {
-		dst += copy;
-		sector += (copy >> 9); // next sector
-		copy = len - copy; // remain data
-		src_page = mybrd_lookup_page(mybrd, sector);
-		if (src_page) {
-			src = kmap_atomic(src_page);
-			memcpy(dst, src, copy);
-			kunmap_atomic(src);
-
-			pr_warn("copy: %p <- %p (%d-bytes)\n", dst, src, (int)copy);
-			show_data(dst);
-			show_data(src);
-		} else {
-			memset(dst, 0, copy);
-			pr_warn("copy: %p <- 0 (%d-bytes)\n", dst, (int)copy);
-			show_data(dst);
-		}
-	}
-
 	kunmap(dst_page);
 	return 0;
 }
