@@ -140,14 +140,14 @@ static int copy_from_user_to_mybrd(struct mybrd_device *mybrd,
 	// store 512*3-bytes at page2 (sector 128~130)
 	// page1->index = 120, page2->index = 128
 
-	target_offset = (sector & (8 - 1)) << 3;
+	target_offset = (sector & (8 - 1)) << 9;
 	// copy = copy data in a page
 	copy = min_t(size_t, len, PAGE_SIZE - target_offset);
 
 	dst_page = mybrd_lookup_page(mybrd, sector);
 	if (!dst_page) {
 		if (!mybrd_insert_page(mybrd, sector))
-		    return -ENOSPC;
+			return -ENOSPC;
 
 		if (copy < len) {
 			sector = sector + (copy >> 9); // new sector number
