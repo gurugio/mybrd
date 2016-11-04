@@ -173,17 +173,16 @@ static int copy_from_user_to_mybrd(struct mybrd_device *mybrd,
 	
 	// copy next page
 	if (copy < len) {
+		src += copy;
 		sector += (copy >> 9);
 		copy = len - copy;
 		dst_page = mybrd_lookup_page(mybrd, sector);
 		BUG_ON(!dst_page);
 
 		dst = kmap(dst_page); // next page
-		src += copy;
 
 		// dst: copy data at the first address of the page
 		memcpy(dst, src, copy);
-		kunmap_atomic(dst);
 		kunmap(dst_page);
 
 		pr_warn("copy: %p <- %p (%d-bytes)\n", dst + target_offset, src, (int)copy);
