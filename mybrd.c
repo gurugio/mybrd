@@ -35,6 +35,11 @@ enum {
 	MYBRD_Q_RQ		= 1, // IO in request base
 };
 
+enum {
+	MYBRD_IRQ_NONE		= 0,
+	MYBRD_IRQ_SOFTIRQ	= 1,
+};
+
 struct mybrd_device {
 	struct request_queue *mybrd_queue;
 	struct gendisk *mybrd_disk;
@@ -45,6 +50,7 @@ struct mybrd_device {
 
 
 static int queue_mode = MYBRD_Q_RQ;
+static int irqmode = MYBRD_IRQ_SOFTIRQ;
 static int mybrd_major;
 struct mybrd_device *global_mybrd;
 #define MYBRD_SIZE_1M 4*1024*1024
@@ -422,12 +428,26 @@ io_error:
 	return -EIO;
 }
 
+static void mybrd_softirq_done_fn(struct request *req)
+{
+	int err;
+	pr_warn("start softirq_done_fn: complete delayed request: %p", req);
+	INIT_LIST_HEAD(&req->queuelist);
+	if (list_empty(&req->queuelist))
+		pr_warn("empty\n");
+	else
+		pr_warn("!empty\n");
+	err = _mybrd_request_fn(req);
+	blk_end_request_all(req, err);
+	pr_warn("end softirq_done_fn\n");
+}
+
 static void mybrd_request_fn(struct request_queue *q)
 {
 	struct request *req;
 	int err = 0;
 
-	pr_warn("start request_fn: q=%p\n", q);
+	pr_warn("start request_fn: q=%p irqmode=%d\n", q, irqmode);
 	//dump_stack();
 
 	while ((req = blk_fetch_request(q)) != NULL) {
@@ -437,7 +457,18 @@ static void mybrd_request_fn(struct request_queue *q)
 			req, (int)blk_rq_bytes(req),
 			rq_data_dir(req) ? "WRITE":"READ");
 		
-		err = _mybrd_request_fn(req);
+		switch (irqmode) {
+		case MYBRD_IRQ_NONE:
+			err = _mybrd_request_fn(req);
+			blk_end_request_all(req, err);
+			break;
+		case MYBRD_IRQ_SOFTIRQ:
+			// pass request into per-cpu list blk_cpu_done
+			// softirq_done_fn will be called for each request
+			blk_complete_request(req);
+			break;
+		}
+
 		blk_end_request_all(req, err); // finish the request
 
 		spin_lock_irq(q->queue_lock);
@@ -479,7 +510,11 @@ static struct mybrd_device *mybrd_alloc(void)
 			goto out_free_brd;
 		}
 		blk_queue_prep_rq(mybrd->mybrd_queue, mybrd_prep_rq_fn);
-		//blk_queue_softirq_done(mybrd->mybrd_queue, mybrd_softirq_done_fn);
+
+
+		if (irqmode == MYBRD_IRQ_SOFTIRQ)
+			blk_queue_softirq_done(mybrd->mybrd_queue,
+					       mybrd_softirq_done_fn);
 	}
 	pr_warn("create queue: mybrd-%p queue-mode-%d rq=%p\n",
 		mybrd, queue_mode, rq);
