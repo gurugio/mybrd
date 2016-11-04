@@ -57,6 +57,7 @@ struct mybrd_device {
 	struct gendisk *mybrd_disk;
 
 	spinlock_t mybrd_lock;
+	spinlock_t mybrd_queue_lock;
 	struct radix_tree_root mybrd_pages;
 
 	// for mq
@@ -603,6 +604,7 @@ static struct mybrd_device *mybrd_alloc(void)
 
 	mybrd->mybrd_number = 0;
 	spin_lock_init(&mybrd->mybrd_lock);
+	spin_lock_init(&mybrd->mybrd_queue_lock);
 	INIT_RADIX_TREE(&mybrd->mybrd_pages, GFP_ATOMIC);
 
 
@@ -616,7 +618,7 @@ static struct mybrd_device *mybrd_alloc(void)
 		blk_queue_make_request(mybrd->mybrd_queue, mybrd_make_request_fn);
 	} else if (queue_mode == MYBRD_Q_RQ) {
 		mybrd->mybrd_queue = blk_init_queue_node(mybrd_request_fn,
-							 &mybrd->mybrd_lock,
+							 &mybrd->mybrd_queue_lock,
 							 NUMA_NO_NODE);
 		if (!mybrd->mybrd_queue) {
 			pr_warn("failed to create RQ-queue\n");
