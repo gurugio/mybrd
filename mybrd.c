@@ -150,8 +150,7 @@ static int copy_from_user_to_mybrd(struct mybrd_device *mybrd,
 			return -ENOSPC;
 
 		if (copy < len) {
-			sector = sector + (copy >> 9); // new sector number
-			if (!mybrd_insert_page(mybrd, sector))
+			if (!mybrd_insert_page(mybrd, sector + (copy >> 9)))
 				return -ENOSPC;
 		}
 
