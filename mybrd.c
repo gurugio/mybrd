@@ -33,47 +33,20 @@ MODULE_LICENSE("GPL");
 enum {
 	MYBRD_Q_BIO		= 0, // process IO in bio by bio
 	MYBRD_Q_RQ		= 1, // IO in request base
-	MYBRD_Q_MQ		= 2,
-};
-
-enum {
-	MYBRD_IRQ_NONE		= 0,
-	MYBRD_IRQ_SOFTIRQ	= 1,
-	MYBRD_IRQ_TIMER		= 2,
-};
-
-
-struct mybrd_sw_queue {
-	unsigned long *tag_map;
-	wait_queue_head_t wait;
-	unsigned int queue_depth;
-	struct mybrd_device *mybrd;
 };
 
 struct mybrd_device {
-	int mybrd_number;
-
 	struct request_queue *mybrd_queue;
 	struct gendisk *mybrd_disk;
-
 	spinlock_t mybrd_lock;
 	struct radix_tree_root mybrd_pages;
-
-	// for mq
-	struct mybrd_sw_queue *sw_queues;
-	struct blk_mq_tag_set tag_set;
-	unsigned int queue_depth;
-	unsigned int nr_hw_queues;
 };
 
 
-static int queue_mode = MYBRD_Q_MQ;/* MYBRD_Q_RQ; */
+static int queue_mode = MYBRD_Q_RQ;
 static int mybrd_major;
 struct mybrd_device *global_mybrd;
 #define MYBRD_SIZE_1M 4*1024*1024
-// sw submit queues for per-cpu or per-node
-static int nr_submit_queues;
-static int hw_queue_depth = 64;
 
 
 static struct page *mybrd_lookup_page(struct mybrd_device *mybrd,
@@ -263,26 +236,6 @@ static int copy_from_mybrd_to_user(struct mybrd_device *mybrd,
 		show_data(dst);
 	}
 
-	if (copy < len) {
-		dst += copy;
-		sector += (copy >> 9); // next sector
-		copy = len - copy; // remain data
-		src_page = mybrd_lookup_page(mybrd, sector);
-		if (src_page) {
-			src = kmap_atomic(src_page);
-			memcpy(dst, src, copy);
-			kunmap_atomic(src);
-
-			pr_warn("copy: %p <- %p (%d-bytes)\n", dst, src, (int)copy);
-			show_data(dst);
-			show_data(src);
-		} else {
-			memset(dst, 0, copy);
-			pr_warn("copy: %p <- 0 (%d-bytes)\n", dst, (int)copy);
-			show_data(dst);
-		}
-	}
-
 	kunmap(dst_page);
 	return 0;
 }
@@ -391,11 +344,6 @@ static const struct block_device_operations mybrd_fops = {
 	.ioctl =		mybrd_ioctl,
 };
 
-/*
- * request_fn, prep_rq_fn, softirq_done_fn are for RequestQueue-base mode
- */
-static int irqmode = MYBRD_IRQ_NONE/* MYBRD_IRQ_SOFTIRQ */;
-
 static int mybrd_prep_rq_fn(struct request_queue *q, struct request *req)
 {
 	struct mybrd_device *mybrd = q->queuedata;
@@ -416,7 +364,7 @@ static int mybrd_prep_rq_fn(struct request_queue *q, struct request *req)
 	return BLKPREP_OK;
 }
 
-static int _mybrd_request_fn_rw(struct request *req)
+static int _mybrd_request_fn(struct request *req)
 {
 	struct bio_vec bvec;
 	struct req_iterator iter;
@@ -438,7 +386,7 @@ static int _mybrd_request_fn_rw(struct request *req)
 		len = bvec.bv_len;
 		p = bvec.bv_page;
 		offset = bvec.bv_offset;
-		pr_warn("    sector=%d bio-info: len=%u p=%p offset=%u\n",
+		pr_warn("    sector=%d segment-info: len=%u p=%p offset=%u\n",
 			(int)sector, len, p, offset);
 
 		if (rq_data_dir(req)) { // WRITE
@@ -473,25 +421,14 @@ io_error:
 	return -EIO;
 }
 
-static void mybrd_softirq_done_fn(struct request *req)
-{
-	int err;
-	pr_warn("start softirq_done_fn: complete delayed request: %p", req);
-	err = _mybrd_request_fn_rw(req);
-	blk_end_request_all(req, err);
-	pr_warn("end softirq_done_fn\n");
-}
-
 static void mybrd_request_fn(struct request_queue *q)
 {
 	struct request *req;
 	int err = 0;
 
-	pr_warn("start request_fn: q=%p irqmode=%d\n", q, irqmode);
+	pr_warn("start request_fn: q=%p\n", q);
 	//dump_stack();
 
-	// blk_fetch_request() extracts the request from the queue
-	// so the req->queuelist should be empty
 	while ((req = blk_fetch_request(q)) != NULL) {
 		spin_unlock_irq(q->queue_lock);
 
@@ -499,207 +436,65 @@ static void mybrd_request_fn(struct request_queue *q)
 			req, (int)blk_rq_bytes(req),
 			rq_data_dir(req) ? "WRITE":"READ");
 		
-		switch (irqmode) {
-		case MYBRD_IRQ_NONE:
-			err = _mybrd_request_fn_rw(req);
-			blk_end_request_all(req, err); // finish the request
-			break;
-		case MYBRD_IRQ_SOFTIRQ:
-			// pass request into per-cpu list blk_cpu_done
-			// softirq_done_fn will be called for each request
-			blk_complete_request(req);
-			break;
-		}
+		err = _mybrd_request_fn(req);
+		blk_end_request_all(req, err); // finish the request
 
-		spin_lock_irq(q->queue_lock); // lock q before fetching request
+		spin_lock_irq(q->queue_lock);
 	}
 	pr_warn("end request_fn\n");
 }
-
-// hw-queue: submit IOs into hw
-static int mybrd_queue_rq(struct blk_mq_hw_ctx *hctx,
-			  const struct blk_mq_queue_data *bd)
-{
-	struct request *req = bd->rq;
-	struct mybrd_sw_queue *sw_queue = hctx->driver_data;
-
-	// When request is allocated,
-	// it allocated sizeof(request) + tag_set.cmd_size
-	// for request-specific data
-	// We only set the size of pdu to sizeof(struct mybrd_device)
-	// mybrd_device is NOT passed in pdu!!
-	struct mybrd_device *mybrd = blk_mq_rq_to_pdu(bd->rq);
-
-	*mybrd = *(sw_queue->mybrd); // copy mybrd object for test
-
-	pr_warn("start queue_rq: request-%p sw_queue-%p request->special=%p\n",
-		req, sw_queue, req->special);
-	pr_warn("mybrd_number=%d nr_queue=%d queue_depth=%d\n",
-		mybrd->mybrd_number, mybrd->nr_hw_queues, mybrd->queue_depth);
-	
-	dump_stack();
-	
-	blk_mq_start_request(req);
-
-	req->special = sw_queue->mybrd; // for _mybrd_request_fn_rw()
-	pr_warn("queue-rq: req=%p len=%d rw=%s\n",
-		req, (int)blk_rq_bytes(req),
-		rq_data_dir(req) ? "WRITE":"READ");
-	_mybrd_request_fn_rw(req);
-	
-	blk_mq_end_request(req, 0);
-
-	pr_warn("end queue_rq\n");
-	return BLK_MQ_RQ_QUEUE_OK;
-}
-
-static int mybrd_init_hctx(struct blk_mq_hw_ctx *hctx,
-			   void *data,
-			   unsigned int index)
-{
-	struct mybrd_device *mybrd = data;
-	struct mybrd_sw_queue *sw_queue = &mybrd->sw_queues[index];
-
-	BUG_ON(!mybrd);
-	BUG_ON(!sw_queue);
-	
-	pr_warn("start init_hctx: hctx=%p mybrd=%p sw_queue[%d]=%p\n",
-		hctx, mybrd, index, sw_queue);
-	pr_warn("info hctx: numa_node=%d queue_num=%d queue->%p\n",
-		(int)hctx->numa_node, (int)hctx->queue_num, hctx->queue);
-	dump_stack();
-
-	// init hctx
-	// We set tag_set.nr_hw_queue to the same with nr_submit_queues
-	// So 1:1 matching for sw-q and hw-q
-	hctx->driver_data = sw_queue;
-
-	// init custom sw_queue
-	sw_queue->queue_depth = mybrd->queue_depth;
-	sw_queue->mybrd = mybrd;
-	mybrd->nr_hw_queues++;
-
-	pr_warn("end init_hctx\n");
-	return 0;
-}
-
-static struct blk_mq_ops mybrd_mq_ops = {
-	.queue_rq = mybrd_queue_rq,
-	.map_queue = blk_mq_map_queue,
-	.init_hctx = mybrd_init_hctx,
-	.complete = mybrd_softirq_done_fn, // share mq-mode and request-mode
-};
 
 static struct mybrd_device *mybrd_alloc(void)
 {
 	struct mybrd_device *mybrd;
 	struct gendisk *disk;
-	int ret;
+	struct request_queue *rq;
 
 	pr_warn("start mybrd_alloc\n");
+
+	/*
+	 * 1st: mybrd_device object
+	 */
 	mybrd = kzalloc(sizeof(*mybrd), GFP_KERNEL);
 	if (!mybrd)
 		goto out;
 
-	mybrd->mybrd_number = 0;
 	spin_lock_init(&mybrd->mybrd_lock);
 	INIT_RADIX_TREE(&mybrd->mybrd_pages, GFP_ATOMIC);
 
-
-	pr_warn("create queue: mybrd-%p queue-mode-%d\n", mybrd, queue_mode);
-
 	if (queue_mode == MYBRD_Q_BIO) {
-		// null_blk uses blk_alloc_queue_node()
-		mybrd->mybrd_queue = blk_alloc_queue_node(GFP_KERNEL, NUMA_NO_NODE);
+		rq = mybrd->mybrd_queue = blk_alloc_queue_node(GFP_KERNEL,
+							       NUMA_NO_NODE);
 		if (!mybrd->mybrd_queue)
 			goto out_free_brd;
 		blk_queue_make_request(mybrd->mybrd_queue, mybrd_make_request_fn);
 	} else if (queue_mode == MYBRD_Q_RQ) {
-		mybrd->mybrd_queue = blk_init_queue_node(mybrd_request_fn,
-							 &mybrd->mybrd_lock,
-							 NUMA_NO_NODE);
+		rq = mybrd->mybrd_queue = blk_init_queue_node(mybrd_request_fn,
+							      &mybrd->mybrd_lock,
+							      NUMA_NO_NODE);
 		if (!mybrd->mybrd_queue) {
 			pr_warn("failed to create RQ-queue\n");
 			goto out_free_brd;
 		}
 		blk_queue_prep_rq(mybrd->mybrd_queue, mybrd_prep_rq_fn);
-		blk_queue_softirq_done(mybrd->mybrd_queue, mybrd_softirq_done_fn);
-	} else if (queue_mode == MYBRD_Q_MQ) {
-		// create two sw-queues and two hw-queues
-		// check hw-q creation at mybrd_mq_ops.init_hctx
-		nr_submit_queues = 2;
-		mybrd->sw_queues = kzalloc(nr_submit_queues *
-					   sizeof(struct mybrd_sw_queue),
-					   GFP_KERNEL);
-		if (!mybrd->sw_queues) {
-			pr_warn("failed to create queues for mq-mode\n");
-			goto out_free_brd;
-		}
-		pr_warn("create %d-queues:\n", nr_submit_queues);
-		{
-			int i;
-			for (i = 0; i < nr_submit_queues; i++)
-				pr_warn("sw_queues[%d]: %p\n", i, &mybrd->sw_queues[i]);
-		}
-
-		mybrd->nr_hw_queues = 0; // inc later in init_hctx()
-		mybrd->queue_depth = hw_queue_depth;
-		
-		// struct blk_mq_tag_set
-		mybrd->tag_set.ops = &mybrd_mq_ops;
-		// 1:1 for submit-queue and hw-queue
-		mybrd->tag_set.nr_hw_queues = nr_submit_queues;
-		// queue depth for each hw queue
-		mybrd->tag_set.queue_depth = hw_queue_depth;
-		mybrd->tag_set.numa_node = NUMA_NO_NODE;
-		// cmd_size: per-request extra data
-		mybrd->tag_set.cmd_size = sizeof(struct mybrd_device);
-		mybrd->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
-		mybrd->tag_set.driver_data = mybrd;
-
-		ret = blk_mq_alloc_tag_set(&mybrd->tag_set);
-		if (ret) {
-			pr_warn("failed to allocate tag-set\n");
-			goto out_free_queue;
-		}
-			
-		mybrd->mybrd_queue = blk_mq_init_queue(&mybrd->tag_set);
-		if (IS_ERR(mybrd->mybrd_queue)) {
-			pr_warn("failed to init queue for mq-mode\n");
-			goto out_free_tag;
-		}
+		//blk_queue_softirq_done(mybrd->mybrd_queue, mybrd_softirq_done_fn);
 	}
+	pr_warn("create queue: mybrd-%p queue-mode-%d rq=%p\n",
+		mybrd, queue_mode, rq);
 
-	mybrd->mybrd_queue->queuedata = mybrd;
-	
-	// 1024*512 = 512K size?
-	// null_blk does not set max-hw-sectors because there is no limit
-	blk_queue_max_hw_sectors(mybrd->mybrd_queue, 1024);
-	// don't know why
-	blk_queue_bounce_limit(mybrd->mybrd_queue, BLK_BOUNCE_ANY);
+	rq->queuedata = mybrd;
+	blk_queue_max_hw_sectors(rq, 1024);
+	blk_queue_bounce_limit(rq, BLK_BOUNCE_ANY);
+	blk_queue_physical_block_size(rq, PAGE_SIZE);
+	blk_queue_logical_block_size(rq, PAGE_SIZE);
+	rq->limits.discard_granularity = PAGE_SIZE;
+	blk_queue_max_discard_sectors(rq, UINT_MAX);
+	rq->limits.discard_zeroes_data = 1;
+	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, rq);
 
-	// kernel tries to read/write 4096b at once
-	// if I check bio in mybrd_make_request_fn().
-	// Whay is block-size?
-	blk_queue_physical_block_size(mybrd->mybrd_queue, PAGE_SIZE);
-	blk_queue_logical_block_size(mybrd->mybrd_queue, PAGE_SIZE);
-
-	// don't know why
-	mybrd->mybrd_queue->limits.discard_granularity = PAGE_SIZE;
-
-	// max sectors for a single discard
-	blk_queue_max_discard_sectors(mybrd->mybrd_queue, UINT_MAX);
-
-	// don't know why
-	mybrd->mybrd_queue->limits.discard_zeroes_data = 1;
-
-	// DISCARD: support discard
-	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, mybrd->mybrd_queue);
-
-
-	// complete to init queue
-	// there is no mybrd dir in /sys/block yet
-
+	/*
+	 * 3rd: gendisk object
+	 */
 	disk = mybrd->mybrd_disk = alloc_disk(1);
 	if (!disk)
 		goto out_free_queue;
@@ -718,15 +513,9 @@ static struct mybrd_device *mybrd_alloc(void)
 	pr_warn("end mybrd_alloc\n");
 	
 	return mybrd;
-out_free_tag:
-	if (queue_mode == MYBRD_Q_MQ)
-		blk_mq_free_tag_set(&mybrd->tag_set);
 out_free_queue:
-	if (queue_mode == MYBRD_Q_MQ) {
-		kfree(mybrd->sw_queues);
-	} else {
-		blk_cleanup_queue(mybrd->mybrd_queue);
-	}
+	blk_cleanup_queue(mybrd->mybrd_queue);
+
 out_free_brd:
 	kfree(mybrd);
 out:
@@ -739,59 +528,29 @@ static void mybrd_free(struct mybrd_device *mybrd)
 	kfree(global_mybrd);
 }
 
-static struct kobject *mybrd_probe(dev_t dev, int *part, void *data)
-{
-	struct kobject *kobj;
-
-	// When probe is called?
-	
-	pr_warn("start mybrd_probe\n");
-	*part = 0; // no partition
-	kobj = get_disk(global_mybrd->mybrd_disk);
-	pr_warn("end mybrd_probe: ret=%p\n", kobj);
-	return kobj;
-}
-
 static int __init mybrd_init(void)
 {
-	/* if (queue_mode != MYBRD_Q_RQ) { */
-	/* 	pr_warn("\n\n\nMUST BE REQUEST-QUEUE MODE\n\n\n"); */
-	/* 	return 0; */
-	/* } */
-	
+	pr_warn("\n\n\nmybrd: module loaded\n\n\n\n");
+
 	mybrd_major = register_blkdev(mybrd_major, "my-ramdisk");
 	if (mybrd_major < 0)
 		return mybrd_major;
 
 	pr_warn("mybrd major=%d\n", mybrd_major);
 	global_mybrd = mybrd_alloc();
-	pr_warn("global-mybrd=%p\n", global_mybrd);
-
 	if (!global_mybrd) {
 		pr_warn("failed to initialize mybrd\n");
 		unregister_blkdev(mybrd_major, "my-ramdisk");
 		return -1;
 	}
-		
-	blk_register_region(MKDEV(mybrd_major, 0), 1UL << MINORBITS,
-			    THIS_MODULE,
-			    mybrd_probe,
-			    NULL, NULL);
-	
-	pr_warn("\n\n\nmybrd: module loaded\n\n\n\n");
+	pr_warn("global-mybrd=%p\n", global_mybrd);
+
 	return 0;
 }
 
 static void __exit mybrd_exit(void)
 {
-	if (queue_mode != MYBRD_Q_RQ) {
-		pr_warn("\n\n\nMUST BE REQUEST-QUEUE MODE\n\n\n");
-		return;
-	}
-
 	mybrd_free(global_mybrd);
-
-	blk_unregister_region(MKDEV(mybrd_major, 0), 1UL << MINORBITS);
 	unregister_blkdev(mybrd_major, "my-ramdisk");
 	
 	pr_warn("brd: module unloaded\n");
@@ -799,4 +558,3 @@ static void __exit mybrd_exit(void)
 
 module_init(mybrd_init);
 module_exit(mybrd_exit);
-
