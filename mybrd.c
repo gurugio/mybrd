@@ -42,9 +42,8 @@ enum {
 };
 
 
-struct mybrd_sw_queue {
-	unsigned long *tag_map;
-	wait_queue_head_t wait;
+struct mybrd_hw_queue_private {
+	unsigned int index;
 	unsigned int queue_depth;
 	struct mybrd_device *mybrd;
 };
@@ -57,10 +56,9 @@ struct mybrd_device {
 	struct radix_tree_root mybrd_pages;
 
 	// for mq
-	struct mybrd_sw_queue *sw_queues;
+	struct mybrd_hw_queue_private *hw_queue_priv;
 	struct blk_mq_tag_set tag_set;
 	unsigned int queue_depth;
-	unsigned int nr_hw_queues;
 };
 
 
@@ -69,7 +67,7 @@ static int mybrd_major;
 struct mybrd_device *global_mybrd;
 #define MYBRD_SIZE_4M 4*1024*1024
 // sw submit queues for per-cpu or per-node
-static int nr_submit_queues;
+static int nr_hw_queues = 1;
 static int hw_queue_depth = 64;
 
 
@@ -519,27 +517,27 @@ static int mybrd_queue_rq(struct blk_mq_hw_ctx *hctx,
 			  const struct blk_mq_queue_data *bd)
 {
 	struct request *req = bd->rq;
-	struct mybrd_sw_queue *sw_queue = hctx->driver_data;
+	struct mybrd_hw_queue_private *priv = hctx->driver_data;
 
 	// When request is allocated,
 	// it allocated sizeof(request) + tag_set.cmd_size
 	// for request-specific data
 	// We only set the size of pdu to sizeof(struct mybrd_device)
 	// mybrd_device is NOT passed in pdu!!
-	struct mybrd_device *mybrd = blk_mq_rq_to_pdu(bd->rq);
+	struct mybrd_device *pdu_mybrd = blk_mq_rq_to_pdu(bd->rq);
 
-	*mybrd = *(sw_queue->mybrd); // copy mybrd object for test
+	BUG_ON(irqmode != MYBRD_IRQ_NONE);
 
-	pr_warn("start queue_rq: request-%p sw_queue-%p request->special=%p\n",
-		req, sw_queue, req->special);
-	pr_warn("nr_queue=%d queue_depth=%d\n",
-		mybrd->nr_hw_queues, mybrd->queue_depth);
+	*pdu_mybrd = *(priv->mybrd); // example to use pdu area
+
+	pr_warn("start queue_rq: request-%p priv-%p request->special=%p\n",
+		req, priv, req->special);
 	
 	dump_stack();
 	
 	blk_mq_start_request(req);
 
-	req->special = sw_queue->mybrd;
+	req->special = priv->mybrd;
 	pr_warn("queue-rq: req=%p len=%d rw=%s\n",
 		req, (int)blk_rq_bytes(req),
 		rq_data_dir(req) ? "WRITE":"READ");
@@ -556,21 +554,21 @@ static int mybrd_init_hctx(struct blk_mq_hw_ctx *hctx,
 			   unsigned int index)
 {
 	struct mybrd_device *mybrd = data;
-	struct mybrd_sw_queue *sw_queue = &mybrd->sw_queues[index];
+	struct mybrd_hw_queue_private *priv = &mybrd->hw_queue_priv[index];
 
 	BUG_ON(!mybrd);
-	BUG_ON(!sw_queue);
+	BUG_ON(!priv);
 	
-	pr_warn("start init_hctx: hctx=%p mybrd=%p sw_queue[%d]=%p\n",
-		hctx, mybrd, index, sw_queue);
+	pr_warn("start init_hctx: hctx=%p mybrd=%p priv[%d]=%p\n",
+		hctx, mybrd, index, priv);
 	pr_warn("info hctx: numa_node=%d queue_num=%d queue->%p\n",
 		(int)hctx->numa_node, (int)hctx->queue_num, hctx->queue);
 	//dump_stack();
 
-	hctx->driver_data = sw_queue;
-	sw_queue->queue_depth = mybrd->queue_depth;
-	sw_queue->mybrd = mybrd;
-	mybrd->nr_hw_queues++;
+	priv->index = index;
+	priv->queue_depth = mybrd->queue_depth;
+	priv->mybrd = mybrd;
+	hctx->driver_data = priv;
 
 	pr_warn("end init_hctx\n");
 	return 0;
@@ -619,19 +617,17 @@ static struct mybrd_device *mybrd_alloc(void)
 		blk_queue_softirq_done(mybrd->mybrd_queue,
 				       mybrd_softirq_done_fn);
 	} else if (queue_mode == MYBRD_Q_MQ) {
-		nr_submit_queues = 2;
-		mybrd->sw_queues = kzalloc(nr_submit_queues *
-					   sizeof(struct mybrd_sw_queue),
+		mybrd->hw_queue_priv = kzalloc(nr_hw_queues *
+					   sizeof(struct mybrd_hw_queue_private),
 					   GFP_KERNEL);
-		if (!mybrd->sw_queues) {
+		if (!mybrd->hw_queue_priv) {
 			pr_warn("failed to create queues for mq-mode\n");
 			goto out_free_brd;
 		}
 
-		mybrd->nr_hw_queues = 0;
 		mybrd->queue_depth = hw_queue_depth;
 		mybrd->tag_set.ops = &mybrd_mq_ops;
-		mybrd->tag_set.nr_hw_queues = nr_submit_queues;
+		mybrd->tag_set.nr_hw_queues = nr_hw_queues;
 		mybrd->tag_set.queue_depth = hw_queue_depth;
 		mybrd->tag_set.numa_node = NUMA_NO_NODE;
 		mybrd->tag_set.cmd_size = sizeof(struct mybrd_device);
@@ -683,7 +679,7 @@ out_free_tag:
 		blk_mq_free_tag_set(&mybrd->tag_set);
 out_free_queue:
 	if (queue_mode == MYBRD_Q_MQ) {
-		kfree(mybrd->sw_queues);
+		kfree(mybrd->hw_queue_priv);
 	} else {
 		blk_cleanup_queue(mybrd->mybrd_queue);
 	}
