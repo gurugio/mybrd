@@ -65,7 +65,7 @@ struct mybrd_device {
 static int queue_mode = MYBRD_Q_MQ;
 static int mybrd_major;
 struct mybrd_device *global_mybrd;
-#define MYBRD_SIZE_4M 4*1024*1024
+#define MYBRD_SIZE_4M 400*1024*1024
 // sw submit queues for per-cpu or per-node
 static int nr_hw_queues = 1;
 static int hw_queue_depth = 64;
@@ -300,7 +300,7 @@ static blk_qc_t mybrd_make_request_fn(struct request_queue *q, struct bio *bio)
 	// print info of bio
 	sector = bio->bi_iter.bi_sector;
 	end_sector = bio_end_sector(bio);
-	rw = bio_rw(bio);
+	rw = op_is_write(bio_op(bio));
 	pr_warn("bio-info: sector=%d end_sector=%d rw=%s\n",
 		(int)sector, (int)end_sector, rw == READ ? "READ" : "WRITE");
 
@@ -323,7 +323,7 @@ static blk_qc_t mybrd_make_request_fn(struct request_queue *q, struct bio *bio)
 		// when the kernel is going to read some data that userspace wrote, *and*
 		// when userspace is going to read some data that the kernel wrote.
 		
-		if (rw == READ || rw == READA) {
+		if (rw == 0) {
 			// kernel write data from kernelspace into userspace
 			err = copy_from_mybrd_to_user(mybrd,
 						      p,
@@ -336,7 +336,7 @@ static blk_qc_t mybrd_make_request_fn(struct request_queue *q, struct bio *bio)
 			// userspace is going to read data that the kernel just wrote
 			// so flush-dcache is necessary
 			flush_dcache_page(page);
-		} else if (rw == WRITE) {
+		} else if (rw == 1) {
 			// kernel is going to read data that userspace wrote,
 			// so flush-dcache is necessary
 			flush_dcache_page(page);
@@ -375,6 +375,11 @@ static int mybrd_ioctl(struct block_device *bdev, fmode_t mode,
 			unsigned int cmd, unsigned long arg)
 {
 	int error = 0;
+	struct inode *in = bdev->bd_inode;
+	struct address_space *asp = in->i_mapping;
+	struct radix_tree_root *root = &asp->page_tree;
+	struct page *p;
+	unsigned long index = 0;
 	pr_warn("start mybrd_ioctl\n");
 
 	pr_warn("end mybrd_ioctl\n");
@@ -574,7 +579,7 @@ static int mybrd_init_hctx(struct blk_mq_hw_ctx *hctx,
 
 static struct blk_mq_ops mybrd_mq_ops = {
 	.queue_rq = mybrd_queue_rq,
-	.map_queue = blk_mq_map_queue,
+	.map_queues = blk_mq_map_queues,
 	.init_hctx = mybrd_init_hctx,
 	.complete = mybrd_softirq_done_fn, // share mq-mode and request-mode
 };

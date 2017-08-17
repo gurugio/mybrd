@@ -1,4 +1,4 @@
-obj-m := drv.o
+obj-m := mybrd.o
 KERN_SOURCE := /lib/modules/$(shell uname -r)/build
 
 default:
