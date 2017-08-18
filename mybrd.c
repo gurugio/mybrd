@@ -22,6 +22,7 @@
 #include <asm/uaccess.h>
 #include <linux/blk-mq.h>
 #include <linux/nodemask.h>
+#include <linux/buffer_head.h>
 
 #ifdef pr_warn
 #undef pr_warn
@@ -65,7 +66,7 @@ struct mybrd_device {
 static int queue_mode = MYBRD_Q_MQ;
 static int mybrd_major;
 struct mybrd_device *global_mybrd;
-#define MYBRD_SIZE_4M 4*1024*1024
+#define MYBRD_SIZE_4M 400*1024*1024
 // sw submit queues for per-cpu or per-node
 static int nr_hw_queues = 1;
 static int hw_queue_depth = 64;
@@ -375,9 +376,34 @@ static int mybrd_ioctl(struct block_device *bdev, fmode_t mode,
 			unsigned int cmd, unsigned long arg)
 {
 	int error = 0;
-	pr_warn("start mybrd_ioctl\n");
+	struct inode *in = bdev->bd_inode;
+	struct address_space *asp = in->i_mapping;
+	struct radix_tree_root *root = &asp->page_tree;
+	struct page *p;
+	unsigned long index = 0;
 
-	pr_warn("end mybrd_ioctl\n");
+	pr_warn("asp: nrpages=%d host=%p\n",
+		(int)asp->nrpages, asp->host);
+	pr_warn("radix-tree: height=%d rnode=%p rnode-count=%d\n",
+		root->height, root->rnode, root->rnode ? root->rnode->count:-1);
+
+	for (index = 0; index < 10; index++) {
+		p = radix_tree_lookup(root, index);
+		if (p)
+			pr_warn("index=%d page=%p pindex=%d\n",
+				(int)index, p, (int)p->index);
+		else
+			pr_warn("no page-cache index=%d\n", (int)index);
+	}
+
+	for (index = 0; index < 10; index++) {
+		struct buffer_head *bh[10];
+		bh[index] = __bread(bdev, index, PAGE_SIZE);
+		pr_warn("bh: index=%d state=%x page=%p blocknr=%d size=%d\n",
+			(int)index, (int)bh[index]->b_state,
+			bh[index]->b_page, bh[index]->b_blocknr, bh[index]->b_size);
+	}
+
 	return error;
 }
 
